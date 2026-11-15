@@ -58,18 +58,11 @@ USE_TZ: Final[bool] = True
 
 ########################################################################################
 
-ALLOWED_HOSTS: Final[Sequence[str]] = (
-    "127.0.0.1",
-    "localhost",
-    "healthcheck.railway.app",
-)
+ALLOWED_HOSTS: Final[Sequence[str]] = CONFIG.allowed_hosts
 
 CORS_ALLOW_ALL_ORIGINS: Final[bool] = False
 CORS_ALLOW_CREDENTIALS: Final[bool] = True
-CORS_ALLOWED_ORIGINS: Final[Sequence[str]] = (
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-)
+CORS_ALLOWED_ORIGINS: Final[Sequence[str]] = CONFIG.cors_allowed_origins
 
 CORS_EXPOSE_HEADERS: Final[Sequence[str]] = (CONFIG.csrf_header,)
 
@@ -77,10 +70,7 @@ CSRF_COOKIE_HTTPONLY: Final[bool] = True
 CSRF_COOKIE_NAME: Final[str] = CONFIG.csrf_cookie_name
 CSRF_COOKIE_SAMESITE: Final[str] = CONFIG.cookie_samesite
 CSRF_COOKIE_SECURE: Final[bool] = CONFIG.cookie_secure
-CSRF_TRUSTED_ORIGINS: Final[Sequence[str]] = (
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-)
+CSRF_TRUSTED_ORIGINS: Final[Sequence[str]] = CONFIG.cors_allowed_origins
 
 FILE_UPLOAD_MAX_MEMORY_SIZE: Final[int] = 5_242_880
 DATA_UPLOAD_MAX_MEMORY_SIZE: Final[int] = 5_242_880
