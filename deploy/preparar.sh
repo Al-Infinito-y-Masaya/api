@@ -17,6 +17,12 @@ command -v gdal_translate > /dev/null || {
   exit 1
 }
 
+mkdir -p "${MANGROOVE_DATOS_HOST:?}"
+chmod 755 "$MANGROOVE_DATOS_HOST"
+
+docker compose --profile prod run --rm --no-deps -T --user root api-prod \
+  chown -R api:api /data/mangroove
+
 if [ ! -d "$MAREA_HOST/GOT4.10c/grids_oceantide_netcdf" ]; then
   mkdir -p "$MAREA_HOST"
 

@@ -2,17 +2,42 @@ api.mangroove.earth {
 	encode zstd gzip
 
 	@retirados path /auth/email-* /auth/register* /auth/two-factor* /auth/mobile/two-factor* /auth/web/two-factor* /media /media/*
-	respond @retirados 404
+	handle @retirados {
+		respond 404
+	}
 
 	@operacion path /operacion/* /auth/user/* /auth/group/* /auth/permission/*
-	respond @operacion 404
+	handle @operacion {
+		respond 404
+	}
 
 	header -Server
 
-	reverse_proxy 127.0.0.1:8080 {
-		health_uri /health/
-		health_interval 30s
-		health_timeout 5s
+	handle_path /archivos/* {
+		root * /srv/mangroove/datos/archivos/public
+
+		@vigente path */vigente.json
+		header @vigente Cache-Control "public, max-age=300"
+
+		@inmutable not path */vigente.json
+		header @inmutable Cache-Control "public, max-age=31536000, immutable"
+
+		header Access-Control-Allow-Origin "https://mangroove.earth"
+
+		file_server
+	}
+
+	handle_errors 404 {
+		header Cache-Control "no-store"
+		respond 404
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8080 {
+			health_uri /health/
+			health_interval 30s
+			health_timeout 5s
+		}
 	}
 
 	log {

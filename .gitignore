@@ -16,6 +16,7 @@ __pycache__/
 media
 site
 
+.datos/
 .marea/
 deploy/estero_real/manglar.tif
 

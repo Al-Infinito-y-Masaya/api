@@ -12,9 +12,9 @@ x-api-env: &api-env
   API_TWO_FACTOR: ${API_TWO_FACTOR:-True}
   BUNNY_PRIVATE_PULL_ZONE_HOST: ${BUNNY_PRIVATE_PULL_ZONE_HOST:-private.cdn.example.com}
   BUNNY_PULL_ZONE_HOST: ${BUNNY_PULL_ZONE_HOST:-cdn.example.com}
-  BUNNY_STORAGE_API_KEY: ${BUNNY_STORAGE_API_KEY:?}
+  BUNNY_STORAGE_API_KEY: ${BUNNY_STORAGE_API_KEY:-sin-uso}
   BUNNY_STORAGE_ZONE: ${BUNNY_STORAGE_ZONE:-api-media}
-  BUNNY_TOKEN_AUTH_KEY: ${BUNNY_TOKEN_AUTH_KEY:?}
+  BUNNY_TOKEN_AUTH_KEY: ${BUNNY_TOKEN_AUTH_KEY:-sin-uso}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
   DATABASE_URL: postgresql://api:api@postgres:5432/api
   DEPLOY: ${DEPLOY:-False}
@@ -30,6 +30,7 @@ x-api-env: &api-env
   MANGROOVE_DATOS: /data/mangroove
   MANGROOVE_MAREA: ${MANGROOVE_MAREA:-}
   MANGROOVE_MODELO_MAREA: ${MANGROOVE_MODELO_MAREA:-GOT4.10_nc}
+  MANGROOVE_URL_ARCHIVOS: ${MANGROOVE_URL_ARCHIVOS:-http://127.0.0.1:8080/archivos}
   MEDIA_ALLOWED_TYPES: ${MEDIA_ALLOWED_TYPES:-application/pdf:pdf,image/jpeg:jpg,image/png:png,image/webp:webp}
   REDIS_SECRET_KEY: ${REDIS_SECRET_KEY:-api}
   REDIS_URL: redis://redis:6379
@@ -133,10 +134,9 @@ services:
     profiles: ["prod"]
     restart: unless-stopped
     volumes:
-      - datos:/data/mangroove
+      - ${MANGROOVE_DATOS_HOST:-./.datos}:/data/mangroove
       - ${MANGROOVE_MAREA_HOST:-./.marea}:/data/marea:ro
       - ${MANGROOVE_ENTRADA_HOST:-./deploy}:/data/entrada:ro
 
 volumes:
-  datos:
   pgdata:
