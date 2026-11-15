@@ -20,3 +20,19 @@
 .md-nav__link--active code {
   color: var(--md-accent-fg-color);
 }
+
+html {
+  font-size: 140%;
+}
+
+@media screen and (min-width: 100em) {
+  html {
+    font-size: 150%;
+  }
+}
+
+@media screen and (min-width: 125em) {
+  html {
+    font-size: 160%;
+  }
+}

@@ -18,6 +18,14 @@ icon: lucide/home
   <code>mangroove-api</code>
 </h1>
 
+<p align="center">
+  Documentación del API y motor de análisis de Mangroove;
+  <br/>
+  los requerimientos, actores, casos de uso y modelo de dominio del backend
+  <br/>
+  que convierte los datos del radar NISAR en mapas de conectividad del manglar.
+</p>
+
 ---
 
 <div align="center" markdown>

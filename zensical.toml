@@ -1,5 +1,5 @@
 [project]
-  copyright = "&copy 2026, mangroove"
+  copyright = "&copy 2026, Mangroove"
 
   extra_css = ["stylesheets/theme.css"]
 
@@ -152,6 +152,10 @@
     language = "es"
     logo     = "logo.svg"
     variant  = "modern"
+
+    [project.theme.font]
+      code = "DM Mono"
+      text = "Josefin Sans"
 
     [[project.theme.palette]]
       media       = "(prefers-color-scheme: light)"

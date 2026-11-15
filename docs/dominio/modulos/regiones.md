@@ -29,6 +29,7 @@ config:
   layout: elk
 ---
 classDiagram
+    direction LR
     class Region {
         +uuid id
         +varchar(50) codigo
