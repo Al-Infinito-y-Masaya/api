@@ -7,6 +7,7 @@ import api_auth.api
 import api_media.api
 import mangroove_publicacion.api
 
+from api_core.config import CONFIG
 from api_core.openapi import OPENAPI_CONFIG, ApiOpenAPIContext
 
 if TYPE_CHECKING:
@@ -19,7 +20,9 @@ if TYPE_CHECKING:
 router: Final[Router] = Router(prefix="")
 
 router.include(api_auth.api.router)
-router.include(api_media.api.router)
+if CONFIG.API_MEDIA_ENDPOINTS:
+    router.include(api_media.api.router)
+
 router.include(mangroove_publicacion.api.router)
 
 schema: Final[OpenAPI] = build_schema(

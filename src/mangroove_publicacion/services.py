@@ -3,13 +3,11 @@ from json import dumps
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from asgiref.sync import async_to_sync
 from django.db.transaction import atomic
 from django.utils.timezone import now
 from numpy import asarray, float64, full, int16, nan, uint8, where
 
 from api_media.enums import MediaVisibility
-from api_media.services.bunny import BUNNY_CLIENT
 from mangroove_analisis.enums import EstadoCorrida
 from mangroove_analisis.models import (
     Corrida,
@@ -23,7 +21,7 @@ from mangroove_analisis.models import (
 )
 from mangroove_analisis.services import CorridaInvalidaError, retirar_corrida
 from mangroove_comun.archivos import absoluta, suma
-from mangroove_comun.medios import borrar, llave, subir
+from mangroove_comun.medios import borrar, escribir_publico, subir
 from mangroove_motor.capas import (
     AZULES,
     NARANJAS,
@@ -47,6 +45,7 @@ from mangroove_publicacion.contrato import (
 )
 from mangroove_publicacion.enums import FormatoArtefacto, TipoArtefacto
 from mangroove_publicacion.models import Artefacto
+from mangroove_publicacion.relato import relato
 
 if TYPE_CHECKING:
     from api_auth.models import ApiUser
@@ -221,15 +220,7 @@ def escribir_vigente(corrida: Corrida) -> None:
         {"region": corrida.region.codigo, "version": corrida.version},  # ty: ignore[unresolved-attribute]
     )
 
-    async_to_sync(BUNNY_CLIENT.put)(
-        checksum=suma(contenido),
-        content=contenido,
-        content_type="application/json",
-        storage_key=llave(
-            MediaVisibility.PUBLIC,
-            f"{corrida.region.codigo}/vigente.json",  # ty: ignore[unresolved-attribute]
-        ),
-    )
+    escribir_publico(f"{corrida.region.codigo}/vigente.json", contenido)  # ty: ignore[unresolved-attribute]
 
 
 ########################################################################################
@@ -353,6 +344,26 @@ def publicar(corrida: Corrida, usuario: ApiUser) -> Corrida:
     escribir_vigente(corrida)
 
     return corrida
+
+
+def proponer_relato(corrida: Corrida, usuario: ApiUser) -> Artefacto:
+    if corrida.estado != EstadoCorrida.PUBLICADA:
+        raise CorridaInvalidaError(
+            f"Solo se propone el relato de una corrida publicada, no {corrida.estado}."
+        )
+
+    if corrida.artefactos.filter(tipo=TipoArtefacto.RELATO).exists():  # ty: ignore[unresolved-attribute]
+        raise CorridaInvalidaError(f"La versión {corrida.version} ya tiene relato.")
+
+    grilla: Grilla = corrida.region.grilla()  # ty: ignore[unresolved-attribute]
+
+    return registrar(
+        corrida,
+        tipo=TipoArtefacto.RELATO,
+        formato=FormatoArtefacto.JSON,
+        contenido=json_bytes(relato(corrida, matrices(corrida, grilla))),
+        usuario=usuario,
+    )
 
 
 def retirar(corrida: Corrida, motivo: str) -> Corrida:

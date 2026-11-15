@@ -38,6 +38,7 @@ from api_auth.controllers.user import (
     ApiUserPermissionsLinkController,
 )
 from api_auth.controllers.verify import MobileVerifyController, WebVerifyController
+from api_core.config import CONFIG
 from api_core.controllers.routers import (
     route_controllers,
     route_inferred_controller,
@@ -50,6 +51,28 @@ if TYPE_CHECKING:
 
 ########################################################################################
 
+OPTIONAL_CONTROLLERS: Final[tuple[type, ...]] = (
+    *(
+        (EmailConfirmController, EmailResendController)
+        if CONFIG.API_EMAIL_ENDPOINTS
+        else ()
+    ),
+    *((RegisterController,) if CONFIG.API_PUBLIC_REGISTRATION else ()),
+    *(
+        (
+            MobileTwoFactorController,
+            TwoFactorConfirmController,
+            TwoFactorController,
+            TwoFactorDisableController,
+            TwoFactorRecoveryController,
+            TwoFactorSetupController,
+            WebTwoFactorController,
+        )
+        if CONFIG.API_TWO_FACTOR
+        else ()
+    ),
+)
+
 router: Final[Router] = Router(
     prefix="",
     tags=["auth"],
@@ -59,31 +82,22 @@ router: Final[Router] = Router(
             ApiUserListController,
             ApiUserListAllController,
             CsrfController,
-            EmailConfirmController,
-            EmailResendController,
             GroupDetailController,
             GroupListController,
             GroupListAllController,
             MobileLoginController,
             MobileLogoutController,
             MobileRefreshController,
-            MobileTwoFactorController,
             MobileVerifyController,
             PermissionDetailController,
             PermissionListController,
             PermissionListAllController,
             ProfileController,
-            RegisterController,
-            TwoFactorConfirmController,
-            TwoFactorController,
-            TwoFactorDisableController,
-            TwoFactorRecoveryController,
-            TwoFactorSetupController,
             WebLoginController,
             WebLogoutController,
             WebRefreshController,
-            WebTwoFactorController,
             WebVerifyController,
+            *OPTIONAL_CONTROLLERS,
             prefix="auth",
         ),
         route_inferred_controller(

@@ -3,7 +3,7 @@ from itertools import pairwise
 from typing import TYPE_CHECKING
 
 from numpy import asarray, float64, full, isfinite
-from numpy.ma import filled, getmaskarray
+from numpy.ma import filled, isMaskedArray
 from pyTMD.compute import tide_elevations
 
 if TYPE_CHECKING:
@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 ########################################################################################
 
 EPOCA: datetime = datetime(2000, 1, 1, tzinfo=UTC)
+
+CORTE_KM: float = 50.0
 
 ########################################################################################
 
@@ -42,20 +44,21 @@ def alturas_marea(
         segundos_desde_epoca(instantes),
         crs=4326,
         directory=directorio,
+        cutoff=CORTE_KM,
         epoch=(2000, 1, 1, 0, 0, 0),
+        extrapolate=True,
         model=modelo,
         standard="UTC",
         type="trajectory",
     )
 
-    mascara: Arreglo = getmaskarray(crudas)
-    valores: Arreglo = asarray(filled(crudas, float("nan")), dtype=float64).reshape(n)
+    valores: Arreglo = asarray(
+        filled(crudas, float("nan")) if isMaskedArray(crudas) else crudas,
+        dtype=float64,
+    ).reshape(n)
 
     return [
-        None
-        if bool(mascara.reshape(-1)[i]) or not isfinite(valores[i])
-        else round(float(valores[i]), 4)
-        for i in range(n)
+        round(float(valores[i]), 4) if isfinite(valores[i]) else None for i in range(n)
     ]
 
 

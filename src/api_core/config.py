@@ -82,6 +82,14 @@ class ApiConfig(BaseSettings, PermissiveDTO):
 
     FRONTEND_URL: HttpUrl = HttpUrl(url="http://localhost:3000")
 
+    ALLOWED_HOSTS: str = "127.0.0.1,localhost,healthcheck.railway.app"
+    CORS_ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    API_EMAIL_ENDPOINTS: bool = True
+    API_MEDIA_ENDPOINTS: bool = True
+    API_PUBLIC_REGISTRATION: bool = True
+    API_TWO_FACTOR: bool = True
+
     DATABASE_URL: PostgresDsn
     REDIS_URL: RedisDsn
 
@@ -200,6 +208,14 @@ class ApiConfig(BaseSettings, PermissiveDTO):
         return f"x-{self.csrf_cookie_name}"
 
     @cached_property
+    def allowed_hosts(self) -> tuple[str, ...]:
+        return split_list(self.ALLOWED_HOSTS)
+
+    @cached_property
+    def cors_allowed_origins(self) -> tuple[str, ...]:
+        return tuple(o.rstrip("/") for o in split_list(self.CORS_ALLOWED_ORIGINS))
+
+    @cached_property
     def frontend_url(self) -> str:
         return str(self.FRONTEND_URL).rstrip("/")
 
@@ -272,6 +288,13 @@ class ApiConfig(BaseSettings, PermissiveDTO):
             }
 
         return cache
+
+
+########################################################################################
+
+
+def split_list(value: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
 ########################################################################################

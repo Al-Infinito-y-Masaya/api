@@ -1,12 +1,12 @@
 from collections.abc import Generator
+from importlib import import_module
 from pathlib import Path
 
+from django.apps import apps
 from django.test.utils import override_settings
 from pytest import MonkeyPatch, fixture
-from respx import MockRouter, mock
 
 from api_auth.models import ApiUser
-from api_media.services.bunny import BUNNY_CLIENT
 from mangroove_comun.config import MANGROOVE_CONFIG
 
 ########################################################################################
@@ -18,18 +18,12 @@ LOCMEM: dict = {
     },
 }
 
+SEMILLAS: tuple[str, ...] = (
+    "mangroove_adquisiciones.migrations.0002_brecha_nisar",
+    "mangroove_analisis.migrations.0003_perfiles_iniciales",
+)
+
 ########################################################################################
-
-
-@fixture(autouse=True)
-def bunny() -> Generator[MockRouter]:
-    with mock(assert_all_called=False) as router:
-        almacen: str = BUNNY_CLIENT.storage_url("")
-
-        router.put(name="put", url__startswith=almacen).respond(201)
-        router.delete(name="delete", url__startswith=almacen).respond(200)
-
-        yield router
 
 
 @fixture(autouse=True)
@@ -55,3 +49,9 @@ def operador(db: None) -> ApiUser:
         email="operador@mangroove.earth",
         password="CONTRASEÑA-larga-123!",
     )
+
+
+@fixture
+def semillas(db: None) -> None:
+    for modulo in SEMILLAS:
+        import_module(modulo).sembrar(apps, None)

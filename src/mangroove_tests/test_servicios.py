@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from h5py import File
-from numpy import arange, float32, full, ones
+from numpy import arange, array, float32, full, nan, ones
 from numpy.ma import masked_array
 from pydantic import SecretStr
 from pytest import MonkeyPatch, approx, fixture, raises
@@ -25,7 +25,14 @@ from mangroove_comun.comandos import (
     region_por_codigo,
     usuario_por_identificador,
 )
-from mangroove_comun.medios import AlmacenamientoError, dimensiones, subir
+from mangroove_comun.config import MangrooveConfig
+from mangroove_comun.medios import (
+    AlmacenamientoError,
+    borrar,
+    dimensiones,
+    subir,
+    url_publica,
+)
 from mangroove_insumos import services as insumos
 from mangroove_insumos.enums import TipoInsumo, TipoSerie
 from mangroove_insumos.models import Insumo, LluviaDiaria
@@ -295,11 +302,32 @@ def test_pytmd_results_are_masked_to_none(
     instantes = [datetime(2026, 7, 1, tzinfo=UTC), datetime(2026, 7, 2, tzinfo=UTC)]
 
     assert alturas_marea(
-        instantes, lon=0.0, lat=0.0, directorio=tmp_path, modelo="FES2014"
+        instantes, lon=0.0, lat=0.0, directorio=tmp_path, modelo="GOT4.10_nc"
     ) == [0.5, None]
     assert (
-        alturas_marea([], lon=0.0, lat=0.0, directorio=tmp_path, modelo="FES2014") == []
+        alturas_marea([], lon=0.0, lat=0.0, directorio=tmp_path, modelo="GOT4.10_nc")
+        == []
     )
+
+
+def test_pytmd_arrays_drop_non_finite_values(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        marea, "tide_elevations", lambda *a, **k: array([[0.25], [nan]])
+    )
+
+    instantes = [datetime(2026, 7, 1, tzinfo=UTC), datetime(2026, 7, 2, tzinfo=UTC)]
+
+    assert alturas_marea(
+        instantes, lon=0.0, lat=0.0, directorio=tmp_path, modelo="GOT4.10_nc"
+    ) == [0.25, None]
+
+
+def test_empty_tide_directory_means_no_model(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("MANGROOVE_MAREA", "")
+
+    assert MangrooveConfig().MANGROOVE_MAREA is None
 
 
 def test_series_interpolate_inside_their_range() -> None:
@@ -509,8 +537,47 @@ def test_media_uploads_are_idempotent_and_detect_conflicts(operador: ApiUser) ->
     assert dimensiones(b"x", "text/csv") == (None, None)
 
 
-def test_storage_failures_are_reported(operador: ApiUser, bunny: object) -> None:
-    bunny.routes["put"].respond(500)  # ty: ignore[unresolved-attribute]
+def test_files_are_written_served_and_deleted_locally(
+    operador: ApiUser, datos: Path
+) -> None:
+    publico = subir(
+        contenido=b"p",
+        mime="text/csv",
+        ruta="x/p.csv",
+        visibilidad=MediaVisibility.PUBLIC,
+        usuario=operador,
+    )
+    privado = subir(
+        contenido=b"q",
+        mime="text/csv",
+        ruta="x/q.csv",
+        visibilidad=MediaVisibility.PRIVATE,
+        usuario=operador,
+    )
+
+    assert (datos / "archivos" / "public" / "x" / "p.csv").read_bytes() == b"p"
+    assert (datos / "archivos" / "private" / "x" / "q.csv").read_bytes() == b"q"
+    assert url_publica(publico) == "http://127.0.0.1:8080/archivos/x/p.csv"
+
+    borrar(publico)
+
+    assert not (datos / "archivos" / "public" / "x" / "p.csv").exists()
+
+    subir(
+        contenido=b"p",
+        mime="text/csv",
+        ruta="x/p.csv",
+        visibilidad=MediaVisibility.PUBLIC,
+        usuario=operador,
+    )
+
+    assert (datos / "archivos" / "public" / "x" / "p.csv").exists()
+    assert privado.storage_key == "private/x/q.csv"
+
+
+def test_storage_failures_are_reported(operador: ApiUser, datos: Path) -> None:
+    datos.mkdir(parents=True, exist_ok=True)
+    (datos / "archivos").write_bytes(b"")
 
     with raises(AlmacenamientoError):
         subir(

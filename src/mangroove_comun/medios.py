@@ -1,20 +1,18 @@
-from contextlib import suppress
 from io import BytesIO
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from asgiref.sync import async_to_sync
 from rasterio.io import MemoryFile
 
+from api_media.enums import MediaVisibility
 from api_media.models import ApiMedia
-from api_media.services.bunny import BUNNY_CLIENT
-from api_media.services.media import STORAGE_ERRORS
-from mangroove_comun.archivos import suma
+from mangroove_comun.archivos import guardar_bytes, suma
 from mangroove_comun.config import MANGROOVE_CONFIG
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from api_auth.models import ApiUser
-    from api_media.enums import MediaVisibility
 
 ########################################################################################
 
@@ -29,7 +27,11 @@ class AlmacenamientoError(RuntimeError):
 
 
 def llave(visibilidad: MediaVisibility, ruta: str) -> str:
-    return f"{visibilidad.value}/{MANGROOVE_CONFIG.MANGROOVE_CDN_PREFIJO}/{ruta}"
+    return f"{visibilidad.value}/{ruta}"
+
+
+def ruta_local(storage_key: str) -> Path:
+    return MANGROOVE_CONFIG.archivos / storage_key
 
 
 def dimensiones(contenido: bytes, mime: str) -> tuple[int | None, int | None]:
@@ -42,6 +44,17 @@ def dimensiones(contenido: bytes, mime: str) -> tuple[int | None, int | None]:
 
     with Image.open(BytesIO(contenido)) as imagen:
         return imagen.width, imagen.height
+
+
+def escribir(storage_key: str, contenido: bytes) -> None:
+    try:
+        guardar_bytes(ruta_local(storage_key), contenido)
+    except OSError as e:
+        raise AlmacenamientoError(f"No se pudo almacenar {storage_key}.") from e
+
+
+def escribir_publico(ruta: str, contenido: bytes) -> None:
+    escribir(llave(MediaVisibility.PUBLIC, ruta), contenido)
 
 
 def subir(
@@ -61,20 +74,15 @@ def subir(
     checksum: str = suma(contenido)
 
     if existente is not None:
-        if existente.checksum == checksum:
-            return existente
+        if existente.checksum != checksum:
+            raise AlmacenamientoError(f"{storage_key} ya existe con otro contenido.")
 
-        raise AlmacenamientoError(f"{storage_key} ya existe con otro contenido.")
+        if not ruta_local(storage_key).exists():
+            escribir(storage_key, contenido)
 
-    try:
-        async_to_sync(BUNNY_CLIENT.put)(
-            checksum=checksum,
-            content=contenido,
-            content_type=mime,
-            storage_key=storage_key,
-        )
-    except STORAGE_ERRORS as e:
-        raise AlmacenamientoError(f"No se pudo almacenar {storage_key}.") from e
+        return existente
+
+    escribir(storage_key, contenido)
 
     ancho, alto = dimensiones(contenido, mime)
 
@@ -90,16 +98,16 @@ def subir(
             width=ancho,
         )
     except Exception:
-        with suppress(*STORAGE_ERRORS):
-            async_to_sync(BUNNY_CLIENT.delete)(storage_key=storage_key)
+        ruta_local(storage_key).unlink(missing_ok=True)
 
         raise
 
 
 def borrar(media: ApiMedia) -> None:
-    with suppress(*STORAGE_ERRORS):
-        async_to_sync(BUNNY_CLIENT.delete)(storage_key=media.storage_key)  # ty: ignore[invalid-argument-type]
+    ruta_local(media.storage_key).unlink(missing_ok=True)  # ty: ignore[invalid-argument-type]
 
 
 def url_publica(media: ApiMedia) -> str:
-    return BUNNY_CLIENT.public_url(media.storage_key)  # ty: ignore[invalid-argument-type]
+    ruta: str = media.storage_key.removeprefix(f"{MediaVisibility.PUBLIC.value}/")  # ty: ignore[unresolved-attribute]
+
+    return f"{MANGROOVE_CONFIG.MANGROOVE_URL_ARCHIVOS.rstrip('/')}/{ruta}"

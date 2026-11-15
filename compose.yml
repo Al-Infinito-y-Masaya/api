@@ -5,16 +5,34 @@ x-api-build: &api-build
   dockerfile: dockerfile
 
 x-api-env: &api-env
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost,healthcheck.railway.app}
+  API_EMAIL_ENDPOINTS: ${API_EMAIL_ENDPOINTS:-True}
+  API_MEDIA_ENDPOINTS: ${API_MEDIA_ENDPOINTS:-True}
+  API_PUBLIC_REGISTRATION: ${API_PUBLIC_REGISTRATION:-True}
+  API_TWO_FACTOR: ${API_TWO_FACTOR:-True}
   BUNNY_PRIVATE_PULL_ZONE_HOST: ${BUNNY_PRIVATE_PULL_ZONE_HOST:-private.cdn.example.com}
   BUNNY_PULL_ZONE_HOST: ${BUNNY_PULL_ZONE_HOST:-cdn.example.com}
-  BUNNY_STORAGE_API_KEY: ${BUNNY_STORAGE_API_KEY:?}
+  BUNNY_STORAGE_API_KEY: ${BUNNY_STORAGE_API_KEY:-sin-uso}
   BUNNY_STORAGE_ZONE: ${BUNNY_STORAGE_ZONE:-api-media}
-  BUNNY_TOKEN_AUTH_KEY: ${BUNNY_TOKEN_AUTH_KEY:?}
+  BUNNY_TOKEN_AUTH_KEY: ${BUNNY_TOKEN_AUTH_KEY:-sin-uso}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
   DATABASE_URL: postgresql://api:api@postgres:5432/api
   DEPLOY: ${DEPLOY:-False}
+  DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
+  DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
+  DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-}
+  EARTHDATA_TOKEN: ${EARTHDATA_TOKEN:-}
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
   JWT_SECRET_KEY: ${JWT_SECRET_KEY:?}
+  MANGROOVE_ACCESO: ${MANGROOVE_ACCESO:-auto}
+  MANGROOVE_CODIGO: ${MANGROOVE_CODIGO:-local}
+  MANGROOVE_DATOS: /data/mangroove
+  MANGROOVE_MAREA: ${MANGROOVE_MAREA:-}
+  MANGROOVE_MODELO_MAREA: ${MANGROOVE_MODELO_MAREA:-GOT4.10_nc}
+  MANGROOVE_URL_ARCHIVOS: ${MANGROOVE_URL_ARCHIVOS:-http://127.0.0.1:8080/archivos}
   MEDIA_ALLOWED_TYPES: ${MEDIA_ALLOWED_TYPES:-application/pdf:pdf,image/jpeg:jpg,image/png:png,image/webp:webp}
-  REDIS_SECRET_KEY: api
+  REDIS_SECRET_KEY: ${REDIS_SECRET_KEY:-api}
   REDIS_URL: redis://redis:6379
   SECRET_KEY: ${SECRET_KEY:?}
   SKIP_SEEDERS: ${SKIP_SEEDERS:-False}
@@ -43,20 +61,22 @@ services:
       timeout: 5s
     image: postgres:18
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+    restart: unless-stopped
     volumes:
       - pgdata:/var/lib/postgresql
 
   redis:
-    command: ["redis-server", "--requirepass", "api", "--save", ""]
+    command: ["redis-server", "--requirepass", "${REDIS_SECRET_KEY:-api}", "--save", ""]
     healthcheck:
       interval: 5s
       retries: 10
-      test: ["CMD", "redis-cli", "-a", "api", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_SECRET_KEY:-api}", "ping"]
       timeout: 5s
     image: redis:8
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
 
   migrate:
     build:
@@ -88,7 +108,7 @@ services:
     healthcheck: *api-healthcheck
     image: api:dev
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     profiles: ["dev"]
     volumes:
       - ./src:/app/src
@@ -98,6 +118,8 @@ services:
       <<: *api-build
       target: runtime-prod
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -108,8 +130,13 @@ services:
     healthcheck: *api-healthcheck
     image: api:prod
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     profiles: ["prod"]
+    restart: unless-stopped
+    volumes:
+      - ${MANGROOVE_DATOS_HOST:-./.datos}:/data/mangroove
+      - ${MANGROOVE_MAREA_HOST:-./.marea}:/data/marea:ro
+      - ${MANGROOVE_ENTRADA_HOST:-./deploy}:/data/entrada:ro
 
 volumes:
   pgdata:

@@ -1,10 +1,15 @@
+from dataclasses import replace
 from datetime import timedelta
 from json import dumps
 from pathlib import Path
+from types import SimpleNamespace
 
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import DatabaseError
 from django.test import Client
 from django.utils.timezone import now
+from numpy import full_like, nan, zeros_like
 from pytest import fixture, mark, raises
 
 from api_auth.models import ApiUser
@@ -25,7 +30,14 @@ from mangroove_insumos.models import EstimacionMarea, Insumo
 from mangroove_insumos.services import cargar_insumo, cargar_serie
 from mangroove_motor.sintetica import Escena, generar
 from mangroove_publicacion.models import Artefacto
-from mangroove_publicacion.services import publicar, purgar_corridas, retirar
+from mangroove_publicacion.relato import RelatoError, lugar, relato, restauracion, ritmo
+from mangroove_publicacion.services import (
+    matrices,
+    proponer_relato,
+    publicar,
+    purgar_corridas,
+    retirar,
+)
 from mangroove_regiones.models import Region
 from mangroove_regiones.services import crear_region
 from mangroove_tests.escenario import Nasa, fecha_inicio, instante
@@ -63,7 +75,7 @@ def caracteristica(geometria: dict, propiedades: dict) -> dict:
 
 
 @fixture
-def region(db: None, escena: Escena) -> Region:
+def region(semillas: None, escena: Escena) -> Region:
     return crear_region(
         codigo="sintetica",
         nombre="Escena sintética",
@@ -474,3 +486,128 @@ def test_retired_versions_answer_gone_and_are_purged(
     assert purgar_corridas() == 1
     assert not ResultadoCelda.objects.filter(corrida=publicada).exists()
     assert not Artefacto.objects.filter(corrida=publicada).exists()
+
+
+########################################################################################
+
+
+@mark.usefixtures("cache_local")
+def test_tour_scenes_are_published_and_linked(
+    publicada: Corrida, operador: ApiUser
+) -> None:
+    codigo = publicada.region.codigo  # ty: ignore[unresolved-attribute]
+    base = f"/regiones/{codigo}/versiones/{publicada.version}"
+
+    cliente = Client()
+
+    assert cliente.get(f"{base}/relato/").status_code == 404
+    assert cliente.get(f"{base}/manifest/").json()["relato"] is None
+
+    call_command("proponerrelato", codigo, publicada.version, "--por", operador.email)
+
+    assert Artefacto.objects.filter(corrida=publicada, tipo="relato").exists()
+    assert cliente.get(f"{base}/relato/").status_code == 302
+    assert cliente.get(f"{base}/manifest/").json()["relato"] == f"{base[1:]}/relato/"
+
+    with raises(CommandError, match="ya tiene relato"):
+        call_command(
+            "proponerrelato", codigo, publicada.version, "--por", operador.email
+        )
+
+    with raises(CommandError, match="no tiene la versión"):
+        call_command("proponerrelato", codigo, "9.9.9", "--por", operador.email)
+
+
+def test_tour_picks_one_scene_per_act(publicada: Corrida) -> None:
+    grilla = publicada.region.grilla()  # ty: ignore[unresolved-attribute]
+
+    escenas = relato(publicada, matrices(publicada, grilla))["escenas"]
+
+    assert [e["id"] for e in escenas] == [
+        "lugar",
+        "ritmo",
+        "desconexion",
+        "parche",
+        "incertidumbre",
+    ]
+
+    ritmo_escena = escenas[1]
+
+    assert len(ritmo_escena["fechas"]) == 2
+    assert ritmo_escena["datos"]["marea_m"][0] < ritmo_escena["datos"]["marea_m"][1]
+    assert escenas[2]["datos"]["n_celdas"] > 0
+    assert grilla.celda_de_codigo(escenas[3]["celdas"][0]) is not None
+    assert escenas[4]["celdas"] == escenas[3]["celdas"]
+
+
+def test_tour_names_the_act_without_data(publicada: Corrida, operador: ApiUser) -> None:
+    grilla = publicada.region.grilla()  # ty: ignore[unresolved-attribute]
+
+    m = matrices(publicada, grilla)
+
+    with raises(RelatoError, match="desconexion"):
+        relato(publicada, replace(m, desconectada=zeros_like(m.desconectada)))
+
+    with raises(RelatoError, match="parche"):
+        relato(publicada, replace(m, suficientes=zeros_like(m.suficientes)))
+
+    with raises(RelatoError, match="lugar"):
+        lugar([], publicada.region)  # ty: ignore[invalid-argument-type]
+
+    sin_marea = list(publicada.fechas.select_related("adquisicion"))  # ty: ignore[unresolved-attribute]
+
+    for f in sin_marea:
+        f.marea_m = None
+
+    with raises(RelatoError, match="ritmo"):
+        ritmo(sin_marea, publicada.region)  # ty: ignore[invalid-argument-type]
+
+    vacio = replace(m, p_error=full_like(m.p_error, nan))
+
+    with raises(RelatoError, match="incertidumbre"):
+        relato(publicada, vacio)
+
+    with raises(CorridaInvalidaError):
+        proponer_relato(
+            crear_corrida(publicada.region, madurez="provisional", tracks=[33, 98]),
+            operador,
+        )
+
+
+class Consulta:
+    def __init__(self, fila: object) -> None:
+        self.fila = fila
+
+    def select_related(self, *_: str) -> Consulta:
+        return self
+
+    def filter(self, **_: object) -> Consulta:
+        return self
+
+    def order_by(self, *_: str) -> Consulta:
+        return self
+
+    def first(self) -> object:
+        return self.fila
+
+
+def test_restoration_scene_centres_the_best_abandoned_pond() -> None:
+    anillo = [[-87.0, 13.0], [-86.0, 13.0], [-86.0, 14.0], [-87.0, 14.0]]
+
+    estanque = SimpleNamespace(
+        codigo="e1",
+        geometria={"coordinates": [[anillo]], "type": "MultiPolygon"},
+    )
+
+    corrida = SimpleNamespace(
+        estanques=Consulta(
+            SimpleNamespace(estanque=estanque, puntaje=0.8, area_ha=12.0)
+        ),
+    )
+
+    escena_final = restauracion(corrida)  # ty: ignore[invalid-argument-type]
+
+    assert escena_final is not None
+    assert escena_final["centro"] == [-86.5, 13.5]
+    assert escena_final["datos"]["estanque"] == "e1"
+    assert restauracion(SimpleNamespace(estanques=Consulta(None))) is None  # ty: ignore[invalid-argument-type]
