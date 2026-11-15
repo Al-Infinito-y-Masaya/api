@@ -183,6 +183,33 @@ API, y de ahí sale el esquema OpenAPI. El esquema JSON del respaldo estático y
 tipos Zod del frontend se generan a partir de él. Un cambio de forma es un cambio
 de versión mayor, por [`RN-15`][rn-15], y el [contrato][contrato] lo documenta.
 
+## D-16
+
+> **El método vive en un paquete sin Django**
+
+Todo el cálculo científico está en `mangroove_motor`, un paquete de funciones
+sobre arreglos de numpy que no importa Django ni toca la base de datos. Las
+apps de Django leen de la base y del disco lo que el método necesita, lo llaman
+y guardan lo que devuelve.
+
+Tres cosas dependen de esa frontera. Las pruebas del método corren sobre una
+escena sintética con verdad conocida, sin base de datos ([`RNF-15`][rnf-15]). El
+cálculo es reproducible porque solo depende de sus entradas y de la semilla
+([`D-14`](#d-14)). Y una exploración llama exactamente a las mismas funciones
+que una corrida completa ([`D-07`](#d-07)), reutilizando el resultado de CUSUM
+de la corrida.
+
+## D-17
+
+> **La configuración del motor viene del entorno**
+
+La ubicación del volumen de datos, el directorio y el nombre del modelo de
+mareas, el modo de acceso a NASA (S3 directo, HTTPS o automático), los hilos de
+lectura, el prefijo en la CDN, la versión del código y el token de Earthdata se
+leen de variables de entorno (`MANGROOVE_*` y `EARTHDATA_TOKEN`). Ninguno vive
+en la base: cambian con el despliegue, no con los datos, y el token nunca debe
+quedar en una tabla ni en la bitácora ([`RNF-09`][rnf-09]).
+
 [contrato]: contrato.md
 [rf-m-23]: ../requerimientos/funcionales/motor.md#rf-m-23
 [rn-03]: ../requerimientos/reglas-negocio.md#rn-03
@@ -192,3 +219,5 @@ de versión mayor, por [`RN-15`][rn-15], y el [contrato][contrato] lo documenta.
 [rnf-01]: ../requerimientos/no-funcionales.md#rnf-01
 [rnf-07]: ../requerimientos/no-funcionales.md#rnf-07
 [rnf-08]: ../requerimientos/no-funcionales.md#rnf-08
+[rnf-09]: ../requerimientos/no-funcionales.md#rnf-09
+[rnf-15]: ../requerimientos/no-funcionales.md#rnf-15

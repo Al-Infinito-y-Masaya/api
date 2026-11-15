@@ -29,7 +29,7 @@ las series.
 |   Identificador de celda   | `varchar(24)`  |            `c_<E>_<N>`, por [`RN-04`][rn-04]            |
 |   Identificador de fecha   | `varchar(20)`  |          `AAAA-MM-DD_TTT_orbita`, en fecha UTC          |
 |      Versión de datos      | `varchar(20)`  |            Semver, patrón `^\d+\.\d+\.\d+$`             |
-|      Suma de archivo       |   `char(64)`   |                 SHA-256 en hexadecimal                  |
+|      Suma de archivo       |   `char(64)`   |   SHA-256 en hexadecimal; `''` = sin archivo todavía    |
 |   Ruta de archivo local    | `varchar(255)` |    Relativa a `MANGROOVE_DATOS`, por [`D-09`][d-09]     |
 | Código estable de catálogo | `varchar(50)`  |               Patrón `^[a-z][a-z0-9_]*$`                |
 |       Lista cerrada        |  `varchar(n)`  |             `CHECK` contra un `TextChoices`             |

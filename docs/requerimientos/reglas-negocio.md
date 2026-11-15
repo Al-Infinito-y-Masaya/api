@@ -29,7 +29,7 @@ publicarse varias veces con distinto CRID. Gana la de CRID más reciente. La
 versión anterior no se borra: queda marcada como reemplazada y la nueva apunta
 a ella, para que las corridas viejas sigan siendo reproducibles.
 
-- **Mecanismo:** `Adquisicion.reemplaza_a` e índice único parcial sobre la pasada donde la adquisición no fue reemplazada
+- **Mecanismo:** `Adquisicion.reemplaza_a` e índice único parcial sobre la pasada (`pasada_at`) donde la adquisición no fue reemplazada
 - **Origen:** [`RF-M-05`][rf-m-05]
 
 ## RN-03
@@ -53,7 +53,7 @@ centro en metros. No es su posición en un arreglo. Así sobrevive a cambios de
 tamaño del polígono y se puede calcular desde cualquier punto sin consultar la
 base de datos.
 
-- **Mecanismo:** `Celda.codigo` como columna generada a partir de `Region` y de fila y columna
+- **Mecanismo:** `Celda.codigo` derivado por trigger a partir de la grilla de `Region`, la fila y la columna
 - **Origen:** [`RF-C-07`][rf-c-07], [`RF-C-08`][rf-c-08]
 
 ## RN-05

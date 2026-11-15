@@ -142,8 +142,13 @@ coherencia alta sobre una celda que parece agua abierta indica lodazal.
 
 Para cada track, el motor calcula el promedio multitemporal de cada celda y el
 desfase de cada fecha respecto a ese promedio, como la mediana sobre celdas
-estables (fuera de humedal). Ese desfase se resta a la fecha, por
-[`RN-06`][rn-06]. El desfase de cada fecha queda guardado en la corrida.
+estables. HH y HV tienen cada una su desfase, que se resta a su banda, por
+[`RN-06`][rn-06]. Los dos desfases de cada fecha quedan guardados en la corrida.
+
+Las celdas estables son las que tienen datos en todos los tracks y no son agua
+abierta en ninguno. De ellas se usan primero las que están fuera del humedal;
+si no alcanzan el mínimo del perfil, las que están fuera de la máscara de
+manglar; y si tampoco alcanzan, todas.
 
 - **Prioridad:** Debe
 - **Criterio de aceptación:** las celdas estables no varían más que el umbral configurado entre fechas del mismo track
@@ -158,7 +163,12 @@ estables (fuera de humedal). Ese desfase se resta a la fecha, por
 
 Cada celda recibe en cada fecha una de las clases de [`RN-07`][rn-07] según el
 método de la sección 6.4 del manual de NISAR, con los umbrales del perfil de la
-corrida. La clase típica de la celda sale de su promedio multitemporal.
+corrida. Se clasifican todas las celdas con datos; las métricas se limitan a
+la máscara de manglar ([`RN-12`][rn-12]).
+
+Cada fecha se compara con el promedio de su propio track. La clase típica de
+una celda se decide por votación: se clasifica el promedio de cada track y gana
+la clase respaldada por más fechas.
 
 - **Prioridad:** Debe
 - **Criterio de aceptación:** la clasificación de la escena sintética de prueba coincide con su verdad en al menos el 90 % de las celdas
@@ -205,6 +215,10 @@ HV y estima su significancia con bootstrap (120 permutaciones por defecto, con
 semilla fija). Publica la primera fecha después del cambio, la confianza y la
 diferencia de HV medio, por [`RN-13`][rn-13].
 
+La serie de cada celda usa solo las fechas en que la celda tiene datos, de modo
+que las celdas en el borde de una franja también reciben resultado. Las celdas
+con menos de cuatro fechas no se evalúan.
+
 - **Prioridad:** Debería
 - **Criterio de aceptación:** dos corridas con los mismos datos y perfil dan los mismos cambios
 
@@ -225,11 +239,17 @@ inundación del manglar vecino.
 
 > **Probar las hipótesis de trabajo**
 
-El motor evalúa las hipótesis del proyecto con la prueba de Mann-Whitney:
-H1, si el manglar junto a bordas se inunda menos en marea alta que el manglar
-junto a canales a la misma cota; H2, si pierde más copa; H3, si los estanques
-abandonados están más cerca de manglar desconectado. Guarda el estadístico, el
-valor p, el tamaño del efecto y los tamaños de muestra.
+El motor evalúa las hipótesis del proyecto:
+
+- **H1**, con Mann-Whitney: si el manglar junto a bordas se inunda menos en marea
+  alta que el manglar junto a canales a la misma cota.
+- **H2**, con la prueba exacta de Fisher: si la proporción de celdas con pérdida
+  de copa es mayor junto a bordas que junto a canales.
+- **H3**, con Mann-Whitney: si los estanques abandonados están más cerca del
+  manglar desconectado que los activos.
+
+Guarda la prueba usada, el estadístico, el valor p, el tamaño del efecto y los
+tamaños de muestra.
 
 - **Prioridad:** Debería
 - **Criterio de aceptación:** una prueba con menos de cinco celdas por grupo se guarda como no evaluable, no como no significativa
@@ -329,5 +349,6 @@ sincronización, hasta tres veces.
 [rn-07]: ../reglas-negocio.md#rn-07
 [rn-10]: ../reglas-negocio.md#rn-10
 [rn-11]: ../reglas-negocio.md#rn-11
+[rn-12]: ../reglas-negocio.md#rn-12
 [rn-13]: ../reglas-negocio.md#rn-13
 [rn-18]: ../reglas-negocio.md#rn-18

@@ -52,6 +52,7 @@ classDiagram
     class Estanque {
         +uuid id
         +uuid insumo_id
+        +smallint numero
         +varchar(30) codigo
         +jsonb geometria
         +real area_ha
@@ -104,22 +105,22 @@ versión rasterizada a la grilla.
 
 ### Columnas
 
-|      Campo       |      Tipo      | Nulo | Predeterminado |                         Descripción                          |
-| :--------------: | :------------: | :--: | :------------: | :----------------------------------------------------------: |
-|   `region_id`    |     `uuid`     |  no  |                |                                                              |
-|      `tipo`      | `varchar(20)`  |  no  |                |                Ver la tabla de tipos de abajo                |
-|    `version`     |   `smallint`   |  no  |    derivada    |           Siguiente versión del tipo en la región            |
-|    `formato`     |  `varchar(8)`  |  no  |                |                     `raster` / `vector`                      |
-|    `media_id`    |     `uuid`     |  no  |                | Archivo original en Bunny, privado (`ApiMedia` del template) |
-|     `sha256`     |   `char(64)`   |  no  |                |                  Suma del archivo original                   |
-| `grilla_archivo` | `varchar(255)` |  no  |                |   `.npy` del insumo rasterizado o reproyectado a la grilla   |
-| `grilla_sha256`  |   `char(64)`   |  no  |                |                                                              |
-|     `fuente`     |     `text`     |  no  |                |    Cita de la fuente: «Global Mangrove Watch v3.0 (2020)»    |
-|   `fuente_url`   |     `text`     |  no  |      `''`      |                                                              |
-|    `licencia`    | `varchar(50)`  |  no  |                |                `CC-BY-4.0`, `ODbL-1.0`, etc.                 |
-|   `fecha_dato`   |     `date`     |  sí  |                |       Fecha de la escena; solo en `optico` y `banda_c`       |
-|   `nubes_pct`    |     `real`     |  sí  |                |            Porcentaje de nubes; solo en `optico`             |
-| `cargado_por_id` |     `uuid`     |  no  |                |               Cuenta de operación que lo subió               |
+|      Campo       |      Tipo      | Nulo | Predeterminado |                                                 Descripción                                                  |
+| :--------------: | :------------: | :--: | :------------: | :----------------------------------------------------------------------------------------------------------: |
+|   `region_id`    |     `uuid`     |  no  |                |                                                                                                              |
+|      `tipo`      | `varchar(20)`  |  no  |                |                                        Ver la tabla de tipos de abajo                                        |
+|    `version`     |   `smallint`   |  no  |    derivada    |                                   Siguiente versión del tipo en la región                                    |
+|    `formato`     |  `varchar(8)`  |  no  |                |                                             `raster` / `vector`                                              |
+|    `media_id`    |     `uuid`     |  no  |                |                         Archivo original en Bunny, privado (`ApiMedia` del template)                         |
+|     `sha256`     |   `char(64)`   |  no  |                |                                          Suma del archivo original                                           |
+| `grilla_archivo` | `varchar(255)` |  no  |      `''`      | `.npy` del insumo rasterizado o reproyectado a la grilla; `''` en las áreas protegidas, que no se rasterizan |
+| `grilla_sha256`  |   `char(64)`   |  no  |      `''`      |                                                                                                              |
+|     `fuente`     |     `text`     |  no  |                |                            Cita de la fuente: «Global Mangrove Watch v3.0 (2020)»                            |
+|   `fuente_url`   |     `text`     |  no  |      `''`      |                                                                                                              |
+|    `licencia`    | `varchar(50)`  |  no  |                |                                        `CC-BY-4.0`, `ODbL-1.0`, etc.                                         |
+|   `fecha_dato`   |     `date`     |  sí  |                |                               Fecha de la escena; solo en `optico` y `banda_c`                               |
+|   `nubes_pct`    |     `real`     |  sí  |                |                                    Porcentaje de nubes; solo en `optico`                                     |
+| `cargado_por_id` |     `uuid`     |  no  |                |                                       Cuenta de operación que lo subió                                       |
 
 ### Tipos de insumo
 
@@ -173,16 +174,19 @@ además de rasterizado, porque la API lo lista, lo ordena y devuelve su polígon
 - **Volumen estimado:** cientos por versión
 - **Origen:** [`RF-M-16`][rf-m-16]
 
-|    Campo    |     Tipo      | Nulo | Predeterminado |                        Descripción                         |
-| :---------: | :-----------: | :--: | :------------: | :--------------------------------------------------------: |
-| `insumo_id` |    `uuid`     |  no  |                |               Versión del insumo `estanques`               |
-|  `codigo`   | `varchar(30)` |  no  |                | Propiedad `id` del GeoJSON, o el número asignado al cargar |
-| `geometria` |    `jsonb`    |  no  |                |                Polígono GeoJSON en lon/lat                 |
-|  `area_ha`  |    `real`     |  no  |                |             Área en la proyección de la región             |
+| Campo | Tipo | Nulo | Predeterminado | Descripción |
+| :---: | :--: | :--: | :------------: | :---------: |
+
+\1
+| `numero` | `smallint` | no | | Valor del estanque en la grilla rasterizada; ordinal en el archivo |
+| `codigo` | `varchar(30)` | no | | Propiedad `id` del GeoJSON, o el número asignado al cargar |
+| `geometria` | `jsonb` | no | | Polígono GeoJSON en lon/lat |
+| `area_ha` | `real` | no | | Área en la proyección de la región |
 
 |            Nombre            |      Definición       |
 | :--------------------------: | :-------------------: |
 | `unq_estanque_insumo_codigo` | `(insumo_id, codigo)` |
+| `unq_estanque_insumo_numero` | `(insumo_id, numero)` |
 
 `trg_estanque_insumo_tipo` (`BEFORE INSERT`) exige que el insumo sea de tipo
 `estanques`. El modelo no tiene columnas de propietario ni de concesión, por

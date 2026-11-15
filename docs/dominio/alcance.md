@@ -78,8 +78,19 @@ erDiagram
 |      [Análisis][analisis]      |   `mangroove_analisis`    |        `PerfilUmbrales`, `Corrida`, `CorridaFecha`, `CorridaInsumo`, resultados        |
 |   [Publicación][publicacion]   |  `mangroove_publicacion`  |                                      `Artefacto`                                       |
 
+Dos paquetes más completan el backend sin ser apps de Django:
+
+- **`mangroove_motor`:** el método científico completo, en numpy, sin importar
+  Django. Lee recortes, agrega, calibra, clasifica, mide, detecta cambios y
+  dibuja capas. Ver [`D-16`][d-16].
+- **`mangroove_comun`:** la configuración del motor (variables de entorno), el
+  manejo de archivos en el volumen de datos y la subida de archivos a Bunny a
+  través de `api_media`.
+
 Las cuentas, la autenticación, la bitácora y los archivos en Bunny son del
-template (`api_auth`, `api_core`, `api_media`) y no se modifican.
+template (`api_auth`, `api_core`, `api_media`). Del template solo se tocan
+`INSTALLED_APPS` y la lista de rutas, para registrar las apps y la API del
+dominio.
 
 ## Restricciones del alcance
 
@@ -121,6 +132,7 @@ datos, no en un servicio.
 |       Una región tiene a lo sumo una vigente       |      `unq_corrida_region_vigente`      | [`RN-15`][rn-15] |
 
 [adquisiciones]: modulos/adquisiciones.md
+[d-16]: decisiones.md#d-16
 [analisis]: modulos/analisis.md
 [insumos]: modulos/insumos.md
 [publicacion]: modulos/publicacion.md
