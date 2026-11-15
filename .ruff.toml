@@ -48,6 +48,22 @@ preview = true
       "unused-function-argument",
     ]
 
+    "**/mangroove_tests/**" = [
+      "assert",
+      "pytest-incorrect-pytest-import",
+      "unused-lambda-argument",
+      "unused-method-argument",
+      "unused-static-method-argument",
+      "hardcoded-password-func-arg",
+      "hardcoded-password-string",
+      "magic-value-comparison",
+      "pytest-fixture-autouse",
+      "typing-only-first-party-import",
+      "typing-only-standard-library-import",
+      "typing-only-third-party-import",
+      "unused-function-argument",
+    ]
+
     "**/config.py" = [
       "typing-only-first-party-import",
       "typing-only-standard-library-import",

@@ -1,9 +1,12 @@
 [project]
   authors = [
+    { name = "Carlos Ruiz" },
     { name = "Joaquín Zúñiga", email = "jp.zuniga.dev@gmail.com" },
   ]
 
   dependencies = [
+    "asf-search>=14.1.0",
+    "boto3>=1.43.117",
     "django>=6.1.1",
     "django-cors-headers>=4.9.0",
     "django-filter>=26.1",
@@ -16,18 +19,26 @@
     "django-pgtrigger>=4.17.0",
     "earthaccess>=0.19.0",
     "granian>=2.8.3",
+    "h5py>=3.16.0",
     "httpx>=0.28.1",
+    "numpy>=2.5.4",
     "phonenumbers>=9.0.39",
     "pillow>=13.0.0",
     "psycopg[binary,pool]>=3.3.5",
     "pydantic-settings>=2.15.0",
     "pydantic[email]>=2.13.5",
+    "pyproj>=3.8.0",
+    "pytmd>=3.1.0",
+    "rasterio>=1.5.2",
     "redis[hiredis]>=8.1.0",
+    "requests>=2.34.2",
+    "scipy>=1.18.1",
+    "shapely>=2.2.0",
   ]
 
   name            = "mangroove-api"
   version         = "0.0.1"
-  description     = "Trabajamos con los más grandes"
+  description     = "Trabajamos con los más grandes."
   readme          = "README.md"
   requires-python = ">=3.14.0"
   license-files   = ["LICENSE.md"]
