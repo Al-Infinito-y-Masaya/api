@@ -2,7 +2,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from django.core.management.base import BaseCommand, CommandError
+from numpy import asarray
 
+from mangroove_comun.archivos import leer_arreglo
 from mangroove_comun.comandos import fecha, region_por_codigo, usuario_por_identificador
 from mangroove_insumos.enums import TipoInsumo
 from mangroove_insumos.services import InsumoInvalidoError, cargar_insumo
@@ -52,3 +54,11 @@ class Command(BaseCommand):
         self.stdout.write(
             msg=self.style.SUCCESS(f"Insumo {insumo.tipo} versión {insumo.version}."),
         )
+
+        if insumo.tipo == TipoInsumo.MANGLAR and insumo.grilla_archivo:
+            manglar = asarray(leer_arreglo(insumo.grilla_archivo), dtype=bool)
+
+            self.stdout.write(
+                f"Celdas con manglar: {int(manglar.sum())} de {manglar.size} "
+                f"({manglar.mean():.1%})."
+            )
