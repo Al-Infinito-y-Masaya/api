@@ -1,5 +1,5 @@
 [project]
-  copyright = "&copy 2026, Joaquín Zúñiga"
+  copyright = "&copy 2026, mangroove"
 
   extra_css = ["stylesheets/theme.css"]
 
