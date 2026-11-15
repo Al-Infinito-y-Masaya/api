@@ -135,8 +135,9 @@ un perfil es crear su versión siguiente.
 
 ### Columnas
 
-Los valores predeterminados son los del perfil `predeterminado` versión 1, que
-reproduce los del prototipo.
+Los valores predeterminados son los del perfil `predeterminado` versión 1,
+tomados del método de la sección 6.4 del manual de NISAR y ajustados con la
+escena sintética de prueba.
 
 |             Campo              |      Tipo      | Predeterminado |                             Descripción                             |
 | :----------------------------: | :------------: | :------------: | :-----------------------------------------------------------------: |
@@ -324,7 +325,7 @@ CHECK (NOT usada_en_if_alta OR marea_nivel = 'alta')
 |                Nombre                |       Evento       | Momento  | Nivel |                                              Regla                                              |      Origen      |
 | :----------------------------------: | :----------------: | :------: | :---: | :---------------------------------------------------------------------------------------------: | :--------------: |
 | `trg_corridafecha_madurez_coherente` |      `INSERT`      | `BEFORE` | `ROW` | La adquisición es de la región y de la madurez de la corrida, y no está reemplazada ni excluida | [`RN-01`][rn-01] |
-|  `trg_corridafecha_derivar_codigo`   |      `INSERT`      | `BEFORE` | `ROW` |                       Sobrescribe `fecha_codigo` con el de la adquisición                       |  [`D-15`][d-15]  |
+|  `trg_corridafecha_derivar_codigo`   |      `INSERT`      | `BEFORE` | `ROW` |                       Sobrescribe `fecha_codigo` con el de la adquisición                       | [`RN-18`][rn-18] |
 |    `trg_resultado_solo_insercion`    | `UPDATE`, `DELETE` | `BEFORE` | `ROW` |               Rechaza toda actualización; admite el borrado solo durante la purga               | [`RN-14`][rn-14] |
 
 ---
@@ -511,7 +512,6 @@ CHECK (activo = (puntaje IS NULL))
 
 [d-04]: ../decisiones.md#d-04
 [d-14]: ../decisiones.md#d-14
-[d-15]: ../decisiones.md#d-15
 [regimenes]: ../convenciones.md#regimenes-de-escritura
 [rf-c-07]: ../../requerimientos/funcionales/consulta.md#rf-c-07
 [rf-c-09]: ../../requerimientos/funcionales/consulta.md#rf-c-09
@@ -532,4 +532,5 @@ CHECK (activo = (puntaje IS NULL))
 [rn-11]: ../../requerimientos/reglas-negocio.md#rn-11
 [rn-14]: ../../requerimientos/reglas-negocio.md#rn-14
 [rn-15]: ../../requerimientos/reglas-negocio.md#rn-15
+[rn-18]: ../../requerimientos/reglas-negocio.md#rn-18
 [rnf-02]: ../../requerimientos/no-funcionales.md#rnf-02

@@ -52,8 +52,8 @@ cotejamiento.
 
 ### _¿Por qué decibeles enteros?_
 
-Es la misma codificación del prototipo, que ya demostró que alcanza: dos bytes
-por valor, con 0,01 dB de precisión frente a un speckle de 0,9 dB. Un `real`
+Dos bytes por valor alcanzan: 0,01 dB de precisión frente a un speckle de
+0,9 dB. Un `real`
 duplicaría el tamaño de cada fila de resultados sin cambiar ninguna clase.
 
 ---

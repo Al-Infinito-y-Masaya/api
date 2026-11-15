@@ -2,12 +2,12 @@
 icon: lucide/file-json
 ---
 
-# Contrato de datos v2
+# Contrato de datos
 
 La forma de lo que la API pública devuelve y de lo que el respaldo estático
-contiene. Es la evolución del contrato preliminar (`mangroove_contrato.zip`):
-conserva sus nombres donde pudo ([`D-15`][d-15]) y cambia lo que exigen las reglas
-de esta versión.
+contiene. Se declara en los esquemas de la API y se publica como esquema
+OpenAPI; el esquema JSON del respaldo y los tipos Zod del frontend derivan de él
+([`D-15`][d-15]).
 
 ## Rutas públicas
 
@@ -41,7 +41,7 @@ esquema OpenAPI que genera la API.
 
 ```json
 {
-  "formato": "mangroove/v2",
+  "formato": "mangroove/1",
   "version": "1.3.0",
   "generado": "2026-11-15T06:00:00Z",
   "region": {
@@ -174,34 +174,42 @@ esquema OpenAPI que genera la API.
 }
 ```
 
-Las reglas del contrato preliminar siguen valiendo: la marea vive en el
-manifiesto y se une por `fecha_id`; `metricas: null` es fuera de la máscara;
-`cambio: null` es sin cambio significativo; `if_alta: null` es sin datos
-suficientes; la serie va en el orden de `manifest.fechas`.
+---
+
+## Reglas del contrato
+
+1. **La marea vive en el manifiesto, no en cada celda.** Cada punto de la serie
+   trae `fecha_id` y el frontend lo une con `manifest.fechas`. Así la marea no se
+   repite en cientos de miles de celdas.
+2. **La serie va en el orden de `manifest.fechas`.** El punto `k` de la serie de
+   cualquier celda corresponde a la fecha `k` del manifiesto de su versión.
+3. **`null` tiene significado.** `metricas: null` es fuera de la máscara de
+   manglar ([`RN-12`][rn-12]); `cambio: null` es sin cambio significativo
+   ([`RN-13`][rn-13]); `if_alta: null` es sin datos suficientes
+   ([`RN-10`][rn-10]); `marea_m: null` es sin estimación de marea
+   ([`RN-08`][rn-08]).
+4. **Todo pertenece a una versión.** Una celda, una capa o un resumen se piden
+   siempre con la versión del manifiesto que la app tiene cargado.
 
 ---
 
-## Cambios respecto al contrato preliminar
+## Razones de la forma
 
-|         Elemento         |            Antes             |                               Ahora                               |                     Motivo                      |
-| :----------------------: | :--------------------------: | :---------------------------------------------------------------: | :---------------------------------------------: |
-|  Identificador de fecha  |       `2026-06-17_asc`       |                       `2026-06-17_033_asc`                        |   Dos tracks pueden compartir órbita y fecha    |
-|  Identificador de celda  |          `c_001042`          |                        `c_458450_1428650`                         |                 [`D-03`][d-03]                  |
-|          `aoi`           |   Polígono, centro y zoom    |                 `region`, con la grilla completa                  |       La app calcula la celda de un clic        |
-|     `fuente.estado`      |   Una madurez por archivo    |           `fuente.madurez` y `crids`; `crid` por fecha            |                [`RN-01`][rn-01]                 |
-| `marea_m`, `marea_nivel` |         Obligatorios         |                  Nulo y `desconocida` admitidos                   |                [`RN-08`][rn-08]                 |
-|          Fechas          |    Marea, órbita y capas     | Más track, CRID, incidencia, cobertura, lluvia y uso en `if_alta` | La app filtra por geometría y explica `if_alta` |
-|        `brechas`         |          No existía          |                         Lista de brechas                          |                [`RN-17`][rn-17]                 |
-|        `umbrales`        |        Cinco umbrales        |                  Perfil completo con su versión                   |      Reproducibilidad, [`RNF-11`][rnf-11]       |
-|          Capas           |      PMTiles por fecha       |                     PNG con `limites` comunes                     |                 [`D-06`][d-06]                  |
-|        `bloques`         | Índice de archivos de celdas |                 Eliminado: la celda se pide sola                  |    [`RF-C-08`][rf-c-08], [`RNF-02`][rnf-02]     |
-|        `metricas`        |                              |                         Más `if_esperada`                         |   Separa manglar alto natural de desconexión    |
-|        `leyendas`        |          No existía          |                    Códigos y colores por capa                     |           El backend dibuja las capas           |
-|        `version`         |     Versión del pipeline     |         Versión de la corrida; `codigo` es la del código          |                [`RN-15`][rn-15]                 |
-
-El esquema JSON y los tipos Zod del contrato preliminar se actualizan con estos
-cambios en el mismo repositorio que el frontend. El esquema OpenAPI de la API es
-la fuente de verdad: los dos derivan de él.
+|         Elemento         |                             Forma                             |                       Motivo                        |
+| :----------------------: | :-----------------------------------------------------------: | :-------------------------------------------------: |
+|  Identificador de fecha  |                     `2026-06-17_033_asc`                      |     Dos tracks pueden compartir órbita y fecha      |
+|  Identificador de celda  |                      `c_458450_1428650`                       |                   [`D-03`][d-03]                    |
+|         `region`         |                Caja, centro y grilla completa                 |         La app calcula la celda de un clic          |
+|         `fuente`         |         `madurez` y `crids`; además, `crid` por fecha         |                  [`RN-01`][rn-01]                   |
+| `marea_m`, `marea_nivel` |                Nulo y `desconocida` admitidos                 |                  [`RN-08`][rn-08]                   |
+|          Fechas          | Track, CRID, incidencia, cobertura, lluvia y uso en `if_alta` |   La app filtra por geometría y explica `if_alta`   |
+|        `brechas`         |                       Lista de brechas                        |                  [`RN-17`][rn-17]                   |
+|        `umbrales`        |                Perfil completo con su versión                 |        Reproducibilidad, [`RNF-11`][rnf-11]         |
+|          Capas           |                   PNG con `limites` comunes                   |                   [`D-06`][d-06]                    |
+|          Celdas          |       Una por petición, por identificador o coordenada        |      [`RF-C-08`][rf-c-08], [`RNF-02`][rnf-02]       |
+|        `metricas`        |                     Incluye `if_esperada`                     | Separa manglar alto natural de manglar desconectado |
+|        `leyendas`        |                  Códigos y colores por capa                   |             El backend dibuja las capas             |
+|   `version`, `codigo`    |   Versión de la corrida y versión del código, por separado    |                  [`RN-15`][rn-15]                   |
 
 [d-03]: decisiones.md#d-03
 [d-06]: decisiones.md#d-06
@@ -221,6 +229,9 @@ la fuente de verdad: los dos derivan de él.
 [rf-c-14]: ../requerimientos/funcionales/consulta.md#rf-c-14
 [rn-01]: ../requerimientos/reglas-negocio.md#rn-01
 [rn-08]: ../requerimientos/reglas-negocio.md#rn-08
+[rn-10]: ../requerimientos/reglas-negocio.md#rn-10
+[rn-12]: ../requerimientos/reglas-negocio.md#rn-12
+[rn-13]: ../requerimientos/reglas-negocio.md#rn-13
 [rn-15]: ../requerimientos/reglas-negocio.md#rn-15
 [rn-17]: ../requerimientos/reglas-negocio.md#rn-17
 [rnf-02]: ../requerimientos/no-funcionales.md#rnf-02

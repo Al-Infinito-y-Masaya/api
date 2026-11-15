@@ -24,9 +24,8 @@ decide qué respuestas tienen que ser rápidas y cuáles completas.
 |   Gestores ambientales    |    Priorizar restauración con un dato común a tres países    |            Resumen por país, estanques y descargas            |
 | Científicos y estudiantes |    Revisar el método, reproducirlo y reutilizar los datos    | Celdas, pruebas de hipótesis, método, exploración y descargas |
 
-!!! note "Precisión frente al documento preliminar"
+!!! note "Por qué no hay cuentas públicas"
 
-    El documento preliminar trata a los cuatro perfiles como usuarios de la misma
-    app pública, y esta versión lo mantiene. Ninguno necesita cuenta: pedirla a
-    una cooperativa de curileras para ver un mapa sería una barrera sin ninguna
-    ganancia, porque todos los datos son abiertos.
+    Ninguno de los cuatro perfiles necesita cuenta. Pedirla a una cooperativa de
+    curileras para ver un mapa sería una barrera sin ninguna ganancia, porque
+    todos los datos son abiertos.

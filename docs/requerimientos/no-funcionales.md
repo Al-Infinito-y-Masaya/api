@@ -36,9 +36,9 @@ presupuesto de operación.
 > **Primera vista en menos de tres segundos sobre 4G**
 
 El manifiesto de una región con 31 fechas pesa menos de 30 KB comprimido y la
-primera capa menos de 300 KB. La app no descarga ningún cubo de datos: el
-prototipo cargaba un JSON de 38,6 MB, y esta es la razón principal para mover el
-cálculo al backend.
+primera capa menos de 300 KB. La app nunca descarga la serie completa de una
+región, que para 230 000 celdas y 31 fechas ronda los 30 MB: recibe capas ya
+dibujadas y celdas una por una.
 
 ## RNF-02
 
@@ -90,7 +90,7 @@ libre y se detiene si no alcanza.
 
 La API, PostgreSQL, Redis y el trabajador del motor corren en la misma instancia
 con `compose.yml`. La app web se publica aparte como sitio estático (GitHub
-Pages o Vercel). Reemplaza al `RNF-11` del documento preliminar.
+Pages o Vercel).
 
 ## RNF-08
 
@@ -157,9 +157,9 @@ textos; los textos en español e inglés son del frontend.
 > **Mantenibilidad**
 
 Un módulo por etapa del motor (ingesta, agregación, clasificación, métricas,
-capas, publicación), cada uno con pruebas. La escena sintética del prototipo,
-que trae su propia verdad, se conserva como dato de prueba de la clasificación y
-de las métricas.
+capas, publicación), cada uno con pruebas. Una escena sintética generada con un
+modelo físico simple, que trae su propia verdad, es el dato de prueba de la
+clasificación y de las métricas.
 
 ## RNF-16
 

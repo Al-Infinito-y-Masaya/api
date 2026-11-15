@@ -148,8 +148,9 @@ centroide y fija:
 - `ancho = ceil((max(E) - x0) / celda_m)`
 - `alto = ceil((y0 - min(N)) / celda_m)`
 
-Es el mismo cálculo de `make_grid` en el prototipo, de modo que una región creada
-con el polígono del prototipo reproduce su grilla.
+El origen queda alineado a múltiplos del tamaño de celda, así que dos regiones
+con el mismo EPSG y el mismo tamaño de celda comparten bordes de celda donde se
+solapan.
 
 ---
 

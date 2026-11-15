@@ -93,14 +93,14 @@ template (`api_auth`, `api_core`, `api_media`) y no se modifican.
 
 ## Fuera de alcance
 
-|                 Funcionalidad                 |                       Estado                        |
-| :-------------------------------------------: | :-------------------------------------------------: |
-|            Cuentas para el público            |   Sin requerimiento: todos los datos son abiertos   |
-|      Alertas al público por correo o SMS      |         Excluido en el documento preliminar         |
-|         Edición de datos por terceros         |         Excluido en el documento preliminar         |
-|       Titularidad de estanques y bordas       |            Excluido por [`RN-16`][rn-16]            |
-| Interferometría y deformación (GUNW completo) | Solo se usa la coherencia, por [`RF-M-09`][rf-m-09] |
-|     Relato guiado y textos en dos idiomas     |            Responsabilidad del frontend             |
+|                 Funcionalidad                 |                         Estado                         |
+| :-------------------------------------------: | :----------------------------------------------------: |
+|            Cuentas para el público            |    Sin requerimiento: todos los datos son abiertos     |
+|      Alertas al público por correo o SMS      | Sin requerimiento: la app publica hallazgos, no avisos |
+|         Edición de datos por terceros         |   Sin requerimiento: solo el operador escribe datos    |
+|       Titularidad de estanques y bordas       |             Excluido por [`RN-16`][rn-16]              |
+| Interferometría y deformación (GUNW completo) |  Solo se usa la coherencia, por [`RF-M-09`][rf-m-09]   |
+|     Relato guiado y textos en dos idiomas     |              Responsabilidad del frontend              |
 
 ---
 

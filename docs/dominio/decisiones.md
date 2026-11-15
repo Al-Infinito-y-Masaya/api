@@ -8,18 +8,17 @@ icon: lucide/chart-network
 
 > **El backend procesa; el frontend presenta**
 
-El prototipo empaquetaba la serie completa de la región en un JSON de 38,6 MB y
-el navegador clasificaba, medía y corría el bootstrap de CUSUM sobre 230 000
-celdas. En un teléfono sobre 4G eso no carga en tres segundos, y dos personas con
-los controles en posiciones distintas veían dos mapas distintos sin saberlo.
+Clasificar, medir y correr el bootstrap de CUSUM sobre 230 000 celdas exige la
+serie completa de la región, unos 30 MB. Enviarla al navegador haría imposible
+la primera vista en tres segundos sobre 4G ([`RNF-01`][rnf-01]), y dejaría que dos
+personas con controles distintos vieran dos mapas distintos sin saberlo.
 
-Esta versión calcula todo en el backend y guarda el resultado como corrida. La
-app recibe capas ya dibujadas, un manifiesto liviano y celdas una por una. La
-exploración de umbrales se conserva, pero se calcula en el servidor y la
-respuesta dice que es una exploración ([`D-07`](#d-07)).
+El backend calcula todo y guarda el resultado como corrida. La app recibe capas
+ya dibujadas, un manifiesto liviano y celdas una por una. Quien quiera probar
+otros umbrales lo hace con una exploración, que también se calcula en el servidor
+y se declara como tal ([`D-07`](#d-07)).
 
-El costo es operar un servidor, que el documento preliminar quería evitar. Se
-acota con una sola instancia ([`RNF-07`][rnf-07]) y con un respaldo estático en
+El costo es operar un servidor. Se acota con una sola instancia ([`RNF-07`][rnf-07]) y con un respaldo estático en
 la CDN que mantiene la app en pie si la API cae ([`RNF-08`][rnf-08]).
 
 ## D-02
@@ -45,9 +44,8 @@ sean cuadrados de 1 ha reales y no trapecios de grados. El identificador de una
 celda es `c_<E>_<N>`, con las coordenadas de su centro en metros, por
 [`RN-04`][rn-04].
 
-El contrato preliminar usaba `c_\d{6}`, la posición en el arreglo. Con ese
-esquema, agrandar el polígono renumera todas las celdas y rompe cada enlace
-compartido. Con coordenadas, la app y la API calculan la celda de un clic con
+Un identificador por posición en el arreglo cambiaría con cualquier ajuste del
+polígono y rompería cada enlace compartido. Con coordenadas, la app y la API calculan la celda de un clic con
 aritmética, sin consultar nada. Cambiar la grilla es crear otra región, por
 [`RN-03`][rn-03].
 
@@ -61,8 +59,7 @@ millones. Como arreglos `smallint[]` alineados con `CorridaFecha.orden`, la celd
 es una sola fila de unos 300 bytes leída por llave, y una corrida inserta 230 000
 filas con `django-pgbulk`.
 
-Los decibeles se guardan multiplicados por 100 en `smallint`, como en el
-prototipo: dos bytes por valor, con precisión de 0,01 dB, que sobra frente a un
+Los decibeles se guardan multiplicados por 100 en `smallint`: dos bytes por valor, con precisión de 0,01 dB, que sobra frente a un
 ruido de speckle de 0,9 dB. El sacrificio es que la base no puede filtrar por el
 valor de una fecha dentro del arreglo sin desanidarlo. Ninguna consulta de la
 API lo necesita: los filtros espaciales y temporales se resuelven en el motor.
@@ -87,7 +84,7 @@ que se borran filas de resultados.
 La región más grande prevista, de 100 × 100 km, es una imagen de 1 000 × 1 000
 celdas. Un PNG con paleta de esa imagen pesa menos de 300 KB y MapLibre lo
 muestra con una fuente de imagen y sus cuatro esquinas. Las teselas vectoriales
-o PMTiles que proponía el contrato preliminar suman una cadena de herramientas
+o PMTiles sumarían una cadena de herramientas
 (`tippecanoe`, `rio-pmtiles`) y una pirámide de niveles de zoom para un dato que
 cabe en un archivo.
 
@@ -173,23 +170,25 @@ por SQL; una regla en un servicio se saltaría en dos de los tres caminos.
 > **El cálculo es determinista**
 
 El bootstrap de CUSUM usa una semilla guardada en la corrida y permutaciones
-precalculadas iguales para todas las celdas, como en el prototipo. Los PNG y
+precalculadas iguales para todas las celdas. Los PNG y
 GeoTIFF se escriben sin marcas de tiempo internas. Dos ejecuciones de la misma
 corrida producen artefactos con la misma suma, por [`RF-M-23`][rf-m-23].
 
 ## D-15
 
-> **El contrato v2 conserva los nombres del v1**
+> **El contrato de datos se deriva del esquema OpenAPI**
 
-El contrato de datos que ya tiene el frontend (`manifest.json`, `Celda`, `Clase`,
-`serieConMarea`) se conserva en nombres y en forma donde fue posible. Los cambios
-son los que exigen las reglas de esta versión y están listados en el
-[contrato][contrato].
+La forma de cada respuesta pública se declara una sola vez, en los esquemas de la
+API, y de ahí sale el esquema OpenAPI. El esquema JSON del respaldo estático y los
+tipos Zod del frontend se generan a partir de él. Un cambio de forma es un cambio
+de versión mayor, por [`RN-15`][rn-15], y el [contrato][contrato] lo documenta.
 
 [contrato]: contrato.md
 [rf-m-23]: ../requerimientos/funcionales/motor.md#rf-m-23
 [rn-03]: ../requerimientos/reglas-negocio.md#rn-03
 [rn-04]: ../requerimientos/reglas-negocio.md#rn-04
 [rn-14]: ../requerimientos/reglas-negocio.md#rn-14
+[rn-15]: ../requerimientos/reglas-negocio.md#rn-15
+[rnf-01]: ../requerimientos/no-funcionales.md#rnf-01
 [rnf-07]: ../requerimientos/no-funcionales.md#rnf-07
 [rnf-08]: ../requerimientos/no-funcionales.md#rnf-08
