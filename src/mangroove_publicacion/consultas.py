@@ -164,18 +164,33 @@ def url_capa(codigo: str, version: str, capa: str, fecha: str = "") -> str:
     return url_publica(artefacto.media)  # ty: ignore[invalid-argument-type]
 
 
-def url_resumen_csv(codigo: str, version: str) -> str:
+def url_unica(codigo: str, version: str, tipo: str, ausente: str) -> str:
     artefacto: Artefacto | None = (
         Artefacto.objects
         .select_related("media")
-        .filter(corrida=publicada(codigo, version), tipo=TipoArtefacto.RESUMEN_CSV)
+        .filter(corrida=publicada(codigo, version), tipo=tipo)
         .first()
     )
 
     if artefacto is None:
-        raise NotFoundError(detail="Esta versión no tiene resumen en CSV.")
+        raise NotFoundError(detail=ausente)
 
     return url_publica(artefacto.media)  # ty: ignore[invalid-argument-type]
+
+
+def url_resumen_csv(codigo: str, version: str) -> str:
+    return url_unica(
+        codigo,
+        version,
+        TipoArtefacto.RESUMEN_CSV,
+        "Esta versión no tiene resumen en CSV.",
+    )
+
+
+def url_relato(codigo: str, version: str) -> str:
+    return url_unica(
+        codigo, version, TipoArtefacto.RELATO, "Esta versión no tiene relato."
+    )
 
 
 ########################################################################################

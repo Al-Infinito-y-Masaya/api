@@ -117,6 +117,8 @@ def manifiesto(corrida: Corrida, base: Base) -> dict:
             else f"{prefijo(corrida)}/estanques/"
         )
 
+    tiene_relato: bool = corrida.artefactos.filter(tipo=TipoArtefacto.RELATO).exists()  # ty: ignore[unresolved-attribute]
+
     inicio = adquisiciones[0].inicio_at if adquisiciones else None
     fin = adquisiciones[-1].inicio_at if adquisiciones else None
 
@@ -183,6 +185,15 @@ def manifiesto(corrida: Corrida, base: Base) -> dict:
             else None
         ),
         "capas": capas,
+        "relato": (
+            (
+                ruta_estatica(corrida, TipoArtefacto.RELATO, "json")
+                if base == Base.ESTATICO
+                else f"{prefijo(corrida)}/relato/"
+            )
+            if tiene_relato
+            else None
+        ),
         "umbrales": umbrales,
         "leyendas": leyendas(),
         "codigo": corrida.codigo_version,

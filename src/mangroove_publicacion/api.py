@@ -15,6 +15,7 @@ from mangroove_publicacion.controllers import (
     ManifiestoVigenteController,
     MetodoController,
     RegionListController,
+    RelatoController,
     ResumenController,
     capa_exploracion,
 )
@@ -80,6 +81,7 @@ router: Final[Router] = Router(
             DescargasController.as_view(),
             name="regiones-descargas",
         ),
+        path(f"{VERSION}/relato/", RelatoController.as_view(), name="regiones-relato"),
         path(
             f"{VERSION}/exploraciones/",
             ExploracionController.as_view(),

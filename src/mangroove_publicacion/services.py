@@ -47,6 +47,7 @@ from mangroove_publicacion.contrato import (
 )
 from mangroove_publicacion.enums import FormatoArtefacto, TipoArtefacto
 from mangroove_publicacion.models import Artefacto
+from mangroove_publicacion.relato import relato
 
 if TYPE_CHECKING:
     from api_auth.models import ApiUser
@@ -353,6 +354,26 @@ def publicar(corrida: Corrida, usuario: ApiUser) -> Corrida:
     escribir_vigente(corrida)
 
     return corrida
+
+
+def proponer_relato(corrida: Corrida, usuario: ApiUser) -> Artefacto:
+    if corrida.estado != EstadoCorrida.PUBLICADA:
+        raise CorridaInvalidaError(
+            f"Solo se propone el relato de una corrida publicada, no {corrida.estado}."
+        )
+
+    if corrida.artefactos.filter(tipo=TipoArtefacto.RELATO).exists():  # ty: ignore[unresolved-attribute]
+        raise CorridaInvalidaError(f"La versión {corrida.version} ya tiene relato.")
+
+    grilla: Grilla = corrida.region.grilla()  # ty: ignore[unresolved-attribute]
+
+    return registrar(
+        corrida,
+        tipo=TipoArtefacto.RELATO,
+        formato=FormatoArtefacto.JSON,
+        contenido=json_bytes(relato(corrida, matrices(corrida, grilla))),
+        usuario=usuario,
+    )
 
 
 def retirar(corrida: Corrida, motivo: str) -> Corrida:

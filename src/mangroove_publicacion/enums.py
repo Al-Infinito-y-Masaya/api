@@ -22,6 +22,7 @@ class TipoArtefacto(TextChoices):
     METADATOS = "metadatos"
     MANIFIESTO = "manifiesto"
     RESUMEN = "resumen"
+    RELATO = "relato"
 
 
 class FormatoArtefacto(TextChoices):

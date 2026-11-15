@@ -1,6 +1,8 @@
 from collections.abc import Generator
+from importlib import import_module
 from pathlib import Path
 
+from django.apps import apps
 from django.test.utils import override_settings
 from pytest import MonkeyPatch, fixture
 from respx import MockRouter, mock
@@ -17,6 +19,11 @@ LOCMEM: dict = {
         "LOCATION": "mangroove-tests",
     },
 }
+
+SEMILLAS: tuple[str, ...] = (
+    "mangroove_adquisiciones.migrations.0002_brecha_nisar",
+    "mangroove_analisis.migrations.0003_perfiles_iniciales",
+)
 
 ########################################################################################
 
@@ -55,3 +62,9 @@ def operador(db: None) -> ApiUser:
         email="operador@mangroove.earth",
         password="CONTRASEÑA-larga-123!",
     )
+
+
+@fixture
+def semillas(db: None) -> None:
+    for modulo in SEMILLAS:
+        import_module(modulo).sembrar(apps, None)

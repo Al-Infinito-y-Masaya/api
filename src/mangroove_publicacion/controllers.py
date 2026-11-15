@@ -134,7 +134,7 @@ class ManifiestoController(PublicoController):
             parsed_path.version,
         )
 
-        return self.de_version(datos, parsed_path)
+        return self.de_version(datos, parsed_path, datos["relato"])
 
 
 class CapaFechaController(PublicoController):
@@ -268,6 +268,17 @@ class DescargasController(PublicoController):
         )
 
         return self.de_version(datos, parsed_path)
+
+
+class RelatoController(PublicoController):
+    @validate(*redireccion_spec(HTTPStatus.FOUND))
+    async def get(self, parsed_path: Path[VersionPath]) -> HttpResponse:
+        destino: str = await sync_to_async(consultas.url_relato)(
+            parsed_path.region,
+            parsed_path.version,
+        )
+
+        return self.redirigir(destino, HTTPStatus.FOUND, consultas.INMUTABLE)
 
 
 class ExploracionController(StrictThrottlingMixin, PublicoController):
