@@ -5,10 +5,8 @@ from pathlib import Path
 from django.apps import apps
 from django.test.utils import override_settings
 from pytest import MonkeyPatch, fixture
-from respx import MockRouter, mock
 
 from api_auth.models import ApiUser
-from api_media.services.bunny import BUNNY_CLIENT
 from mangroove_comun.config import MANGROOVE_CONFIG
 
 ########################################################################################
@@ -26,17 +24,6 @@ SEMILLAS: tuple[str, ...] = (
 )
 
 ########################################################################################
-
-
-@fixture(autouse=True)
-def bunny() -> Generator[MockRouter]:
-    with mock(assert_all_called=False) as router:
-        almacen: str = BUNNY_CLIENT.storage_url("")
-
-        router.put(name="put", url__startswith=almacen).respond(201)
-        router.delete(name="delete", url__startswith=almacen).respond(200)
-
-        yield router
 
 
 @fixture(autouse=True)

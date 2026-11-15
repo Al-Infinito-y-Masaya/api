@@ -21,7 +21,7 @@ class MangrooveConfig(BaseSettings):
     MANGROOVE_MODELO_MAREA: str = "GOT4.10_nc"
     MANGROOVE_ACCESO: Literal["auto", "https", "s3"] = "auto"
     MANGROOVE_HILOS: NonNegativeInt = 0
-    MANGROOVE_CDN_PREFIJO: str = "mangroove"
+    MANGROOVE_URL_ARCHIVOS: str = "http://127.0.0.1:8080/archivos"
     MANGROOVE_CODIGO: str = "local"
     MANGROOVE_DIAS_PURGA: int = 30
 
@@ -47,6 +47,10 @@ class MangrooveConfig(BaseSettings):
     @property
     def cubos(self) -> Path:
         return self.MANGROOVE_DATOS / "cubos"
+
+    @property
+    def archivos(self) -> Path:
+        return self.MANGROOVE_DATOS / "archivos"
 
 
 ########################################################################################

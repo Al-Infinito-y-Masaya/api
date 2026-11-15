@@ -26,7 +26,13 @@ from mangroove_comun.comandos import (
     usuario_por_identificador,
 )
 from mangroove_comun.config import MangrooveConfig
-from mangroove_comun.medios import AlmacenamientoError, dimensiones, subir
+from mangroove_comun.medios import (
+    AlmacenamientoError,
+    borrar,
+    dimensiones,
+    subir,
+    url_publica,
+)
 from mangroove_insumos import services as insumos
 from mangroove_insumos.enums import TipoInsumo, TipoSerie
 from mangroove_insumos.models import Insumo, LluviaDiaria
@@ -531,8 +537,47 @@ def test_media_uploads_are_idempotent_and_detect_conflicts(operador: ApiUser) ->
     assert dimensiones(b"x", "text/csv") == (None, None)
 
 
-def test_storage_failures_are_reported(operador: ApiUser, bunny: object) -> None:
-    bunny.routes["put"].respond(500)  # ty: ignore[unresolved-attribute]
+def test_files_are_written_served_and_deleted_locally(
+    operador: ApiUser, datos: Path
+) -> None:
+    publico = subir(
+        contenido=b"p",
+        mime="text/csv",
+        ruta="x/p.csv",
+        visibilidad=MediaVisibility.PUBLIC,
+        usuario=operador,
+    )
+    privado = subir(
+        contenido=b"q",
+        mime="text/csv",
+        ruta="x/q.csv",
+        visibilidad=MediaVisibility.PRIVATE,
+        usuario=operador,
+    )
+
+    assert (datos / "archivos" / "public" / "x" / "p.csv").read_bytes() == b"p"
+    assert (datos / "archivos" / "private" / "x" / "q.csv").read_bytes() == b"q"
+    assert url_publica(publico) == "http://127.0.0.1:8080/archivos/x/p.csv"
+
+    borrar(publico)
+
+    assert not (datos / "archivos" / "public" / "x" / "p.csv").exists()
+
+    subir(
+        contenido=b"p",
+        mime="text/csv",
+        ruta="x/p.csv",
+        visibilidad=MediaVisibility.PUBLIC,
+        usuario=operador,
+    )
+
+    assert (datos / "archivos" / "public" / "x" / "p.csv").exists()
+    assert privado.storage_key == "private/x/q.csv"
+
+
+def test_storage_failures_are_reported(operador: ApiUser, datos: Path) -> None:
+    datos.mkdir(parents=True, exist_ok=True)
+    (datos / "archivos").write_bytes(b"")
 
     with raises(AlmacenamientoError):
         subir(
