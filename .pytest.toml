@@ -1,0 +1,18 @@
+[pytest]
+  DJANGO_SETTINGS_MODULE = "api_core.settings"
+
+  addopts = [
+    "--cov",
+    "--cov-report=term-missing",
+    "--numprocesses=4",
+    "--quiet",
+    "--reuse-db",
+  ]
+
+  console_output_style = "count"
+
+  filterwarnings = [
+    "ignore::dmr.throttling.backends.django_cache.UnsafeCacheBackendWarning",
+  ]
+
+  pythonpath = ["src"]
