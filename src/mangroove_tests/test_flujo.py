@@ -387,6 +387,12 @@ def test_public_api_serves_the_published_version(publicada: Corrida) -> None:
 
     fecha = manifiesto.json()["fechas"][0]["id"]
 
+    for enlace in (
+        manifiesto.json()["fechas"][0]["capas"]["rgb"],
+        manifiesto.json()["capas"]["if_alta"],
+    ):
+        assert cliente.get("/" + enlace).status_code == 302
+
     assert cliente.get(f"{base}/fechas/{fecha}/capas/rgb/").status_code == 302
     assert cliente.get(f"{base}/capas/desconexion/").status_code == 302
 
@@ -422,7 +428,7 @@ def test_public_api_serves_the_published_version(publicada: Corrida) -> None:
     assert exploracion.status_code == 200
     assert exploracion.json()["exploracion"] is True
 
-    capa = cliente.get("/" + exploracion.json()["capas"]["desconexion"] + "/")
+    capa = cliente.get("/" + exploracion.json()["capas"]["desconexion"])
 
     assert capa.status_code == 200
     assert capa["Content-Type"] == "image/png"

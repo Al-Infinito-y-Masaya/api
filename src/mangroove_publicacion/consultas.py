@@ -302,7 +302,7 @@ def explorar(codigo: str, version: str, cambios: dict) -> dict:
         "umbrales": dumps(cambios, sort_keys=True),
         "capas": {
             "desconexion": (
-                f"regiones/{codigo}/versiones/{version}/exploraciones/{huella}/capas/desconexion"
+                f"regiones/{codigo}/versiones/{version}/exploraciones/{huella}/capas/desconexion/"
             ),
         },
         "resumen": guardado["resumen"],

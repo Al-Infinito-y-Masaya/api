@@ -74,9 +74,9 @@ def ruta_capa(corrida: Corrida, tipo: str, base: Base, fecha: str = "") -> str:
         return ruta_estatica(corrida, tipo, "png", fecha)
 
     if fecha:
-        return f"{prefijo(corrida)}/fechas/{fecha}/capas/{tipo}"
+        return f"{prefijo(corrida)}/fechas/{fecha}/capas/{tipo}/"
 
-    return f"{prefijo(corrida)}/capas/{tipo}"
+    return f"{prefijo(corrida)}/capas/{tipo}/"
 
 
 def instante(valor: object) -> str:
@@ -114,7 +114,7 @@ def manifiesto(corrida: Corrida, base: Base) -> dict:
         capas["estanques"] = (
             ruta_estatica(corrida, TipoArtefacto.ESTANQUES, "geojson")
             if base == Base.ESTATICO
-            else f"{prefijo(corrida)}/estanques"
+            else f"{prefijo(corrida)}/estanques/"
         )
 
     inicio = adquisiciones[0].inicio_at if adquisiciones else None
