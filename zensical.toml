@@ -3,33 +3,67 @@
 
   extra_css = ["stylesheets/theme.css"]
 
-  repo_name = "jp-zuniga/backend-factory"
-  repo_url  = "https://github.com/jp-zuniga/backend-factory"
+  extra_javascript = ["scripts/elk.mjs"]
+
+  repo_name = "Al-Infinito-y-Masaya/api"
+  repo_url  = "https://github.com/Al-Infinito-y-Masaya/api"
 
   site_author      = "Joaquín Zúñiga <jp.zuniga.dev@gmail.com>"
-  site_description = "backend-factory"
-  site_name        = "backend-factory"
+  site_description = "API y motor de análisis de Mangroove."
+  site_name        = "mangroove-api"
 
   nav = [
-    { "Home" = "index.md" },
+    { "Inicio" = "index.md" },
     {
-      "API" = [
-        "api/index.md",
-        "api/conventions.md",
-        "api/authentication.md",
-        "api/sessions.md",
-        "api/email-confirmation.md",
-        "api/two-factor.md",
-        "api/users.md",
-        "api/media.md",
-        "api/errors.md",
+      "Requerimientos" = [
+        "requerimientos/index.md",
+        "requerimientos/reglas-negocio.md",
+        {
+          "Funcionales" = [
+            "requerimientos/funcionales/motor.md",
+            "requerimientos/funcionales/operacion.md",
+            "requerimientos/funcionales/consulta.md",
+          ],
+        },
+        "requerimientos/no-funcionales.md",
+      ],
+    },
+    {
+      "Actores del sistema" = [
+        "actores/index.md",
+        "actores/consulta.md",
+        "actores/operacion.md",
+      ],
+    },
+    {
+      "Casos de uso" = [
+        "casos-uso/consulta.md",
+        "casos-uso/operacion.md",
+      ],
+    },
+    {
+      "Modelo de dominio" = [
+        "dominio/alcance.md",
+        "dominio/decisiones.md",
+        "dominio/convenciones.md",
+        "dominio/procesos.md",
+        "dominio/contrato.md",
+        {
+          "Módulos" = [
+            "dominio/modulos/regiones.md",
+            "dominio/modulos/adquisiciones.md",
+            "dominio/modulos/insumos.md",
+            "dominio/modulos/analisis.md",
+            "dominio/modulos/publicacion.md",
+          ],
+        },
       ],
     },
   ]
 
   [[project.extra.social]]
     icon = "fontawesome/brands/github"
-    link = "https://github.com/jp-zuniga/backend-factory"
+    link = "https://github.com/Al-Infinito-y-Masaya/api"
 
   [project.markdown_extensions]
     abbr       = {}
@@ -108,24 +142,28 @@
       "navigation.instant.progress",
       "navigation.path",
       "navigation.pruning",
+      "navigation.sections",
+      "navigation.tabs",
+      "navigation.tabs.sticky",
       "navigation.top",
     ]
 
-    favicon = "logo.svg"
-    logo    = "logo.svg"
-    variant = "modern"
+    favicon  = "logo.svg"
+    language = "es"
+    logo     = "logo.svg"
+    variant  = "modern"
 
     [[project.theme.palette]]
       media       = "(prefers-color-scheme: light)"
       scheme      = "default"
       toggle.icon = "lucide/sun"
-      toggle.name = "Toggle dark mode"
+      toggle.name = "Ir a modo oscuro"
 
     [[project.theme.palette]]
       media       = "(prefers-color-scheme: dark)"
       scheme      = "slate"
       toggle.icon = "lucide/moon"
-      toggle.name = "Toggle light mode"
+      toggle.name = "Ir a modo claro"
 
   [project.validation]
     invalid_link_anchors  = true

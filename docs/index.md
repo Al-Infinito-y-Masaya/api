@@ -1,4 +1,7 @@
 ---
+hide:
+  - navigation
+  - toc
 icon: lucide/home
 ---
 
@@ -12,14 +15,10 @@ icon: lucide/home
 </div>
 
 <h1 align="center">
-  <code>backend-factory</code>
+  <code>mangroove-api</code>
 </h1>
 
 ---
-
-<h3 align="center">
-  backend factory!
-</h3>
 
 <div align="center" markdown>
 
