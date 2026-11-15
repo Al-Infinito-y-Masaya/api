@@ -127,7 +127,8 @@ la devuelve igual que [`RF-C-07`][rf-c-07]. Un punto fuera de la grilla responde
 
 Hectáreas de manglar, de manglar desconectado, con datos insuficientes y con
 pérdida de copa, por país y para la región completa. Por fecha, hectáreas de
-cada clase. En JSON o en CSV según el encabezado `Accept`.
+cada clase. En JSON, o en CSV con el parámetro `formato=csv`, que redirige al
+archivo publicado en la CDN.
 
 - **Prioridad:** Debería
 - **Criterio de aceptación:** las cifras coinciden con el CSV de descarga

@@ -169,15 +169,15 @@ dependen de los insumos y viven en los resultados de cada corrida
 
 ### Columnas
 
-|    Campo     |     Tipo      | Nulo | Predeterminado |                       Descripción                        |
-| :----------: | :-----------: | :--: | :------------: | :------------------------------------------------------: |
-| `region_id`  |    `uuid`     |  no  |                |                                                          |
-|    `fila`    |   `integer`   |  no  |                |                 Desde 0, de norte a sur                  |
-|  `columna`   |   `integer`   |  no  |                |                 Desde 0, de oeste a este                 |
-|   `este_m`   |   `integer`   |  no  |    derivada    |       Coordenada E del centro; la fija el trigger        |
-|  `norte_m`   |   `integer`   |  no  |    derivada    |       Coordenada N del centro; la fija el trigger        |
-|   `codigo`   | `varchar(24)` |  no  |    generada    | **Almacenada**. `'c_' \|\| este_m \|\| '_' \|\| norte_m` |
-| `lon`, `lat` |   `float8`    |  no  |                |  Centro en WGS84, calculado con `pyproj` en el servicio  |
+|    Campo     |     Tipo      | Nulo | Predeterminado |                         Descripción                          |
+| :----------: | :-----------: | :--: | :------------: | :----------------------------------------------------------: |
+| `region_id`  |    `uuid`     |  no  |                |                                                              |
+|    `fila`    |   `integer`   |  no  |                |                   Desde 0, de norte a sur                    |
+|  `columna`   |   `integer`   |  no  |                |                   Desde 0, de oeste a este                   |
+|   `este_m`   |   `integer`   |  no  |    derivada    |         Coordenada E del centro; la fija el trigger          |
+|  `norte_m`   |   `integer`   |  no  |    derivada    |         Coordenada N del centro; la fija el trigger          |
+|   `codigo`   | `varchar(24)` |  no  |    derivada    | `'c_' \|\| este_m \|\| '_' \|\| norte_m`; lo fija el trigger |
+| `lon`, `lat` |   `float8`    |  no  |                |    Centro en WGS84, calculado con `pyproj` en el servicio    |
 
 ### Unicidad
 
@@ -188,10 +188,9 @@ dependen de los insumos y viven en los resultados de cada corrida
 
 ### Triggers
 
-|           Nombre           |  Evento  | Momento  | Nivel |                                                 Regla                                                 |      Origen      |
-| :------------------------: | :------: | :------: | :---: | :---------------------------------------------------------------------------------------------------: | :--------------: |
-| `trg_celda_derivar_centro` | `INSERT` | `BEFORE` | `ROW` | Sobrescribe `este_m` y `norte_m` con `x0 + (columna + 0,5) · celda_m` y `y0 − (fila + 0,5) · celda_m` | [`RN-04`][rn-04] |
-| `trg_celda_dentro_grilla`  | `INSERT` | `BEFORE` | `ROW` |                          Rechaza filas o columnas fuera de `alto` y `ancho`                           | [`RN-03`][rn-03] |
+|           Nombre           |  Evento  | Momento  | Nivel |                                                                                      Regla                                                                                      |               Origen               |
+| :------------------------: | :------: | :------: | :---: | :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------: |
+| `trg_celda_derivar_centro` | `INSERT` | `BEFORE` | `ROW` | Rechaza filas o columnas fuera de `alto` y `ancho`; sobrescribe `este_m` y `norte_m` con `x0 + (columna + 0,5) · celda_m` y `y0 − (fila + 0,5) · celda_m`, y `codigo` con ambos | [`RN-03`][rn-03], [`RN-04`][rn-04] |
 
 ### Ubicar una celda desde un punto
 

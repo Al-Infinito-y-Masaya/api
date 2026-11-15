@@ -59,6 +59,9 @@ classDiagram
         +varchar(12) estado
         +boolean vigente
         +smallint n_fechas
+        +uuid[] fijadas
+        +varchar(255) cubo_archivo
+        +char(64) cubo_sha256
         +uuid solicitada_por_id
         +uuid publicada_por_id
         +timestamptz publicada_at
@@ -73,7 +76,8 @@ classDiagram
         +uuid adquisicion_id
         +smallint orden
         +varchar(20) fecha_codigo
-        +real desfase_db
+        +real desfase_hh_db
+        +real desfase_hv_db
         +real marea_m
         +varchar(12) marea_nivel
         +real lluvia_3d_mm
@@ -83,6 +87,7 @@ classDiagram
         +uuid id
         +uuid corrida_id
         +uuid insumo_id
+        +varchar(20) tipo
     }
     class ResultadoCelda {
         +uuid id
@@ -139,36 +144,48 @@ Los valores predeterminados son los del perfil `predeterminado` versión 1,
 tomados del método de la sección 6.4 del manual de NISAR y ajustados con la
 escena sintética de prueba.
 
-|             Campo              |      Tipo      | Predeterminado |                             Descripción                             |
-| :----------------------------: | :------------: | :------------: | :-----------------------------------------------------------------: |
-|            `codigo`            | `varchar(50)`  |                |            `estricto`, `predeterminado`, `permisivo`...             |
-|           `version`            |   `smallint`   |    derivada    |                 Siguiente versión del mismo código                  |
-|            `nombre`            | `varchar(100)` |                |                                                                     |
-|     `ow_hh_db`, `ow_hv_db`     |     `real`     | `-16.5`, `-22` |          Agua abierta: HH y HV por debajo de estos valores          |
-|           `iv_hh_db`           |     `real`     |     `-6.5`     |          Vegetación inundada: HH por encima de este valor           |
-|         `iv_ratio_db`          |     `real`     |      `5`       |        Vegetación inundada: HH − HV por encima de este valor        |
-| `cambio_hh_db`, `cambio_hv_db` |     `real`     |   `3`, `1.5`   | Cambio respecto al promedio del track que mueve una celda de clase  |
-|     `nc_hh_db`, `nc_hv_db`     |     `real`     |   `-1`, `-7`   |                 Por encima: fuera del modelo (`NC`)                 |
-|       `usar_coherencia`        |   `boolean`    |     `true`     |            Corregir `OW` a `NI` si la coherencia es alta            |
-|        `coherencia_min`        |     `real`     |     `0.40`     |                                                                     |
-|         `marea_alta_m`         |     `real`     |     `0.55`     |            Desde esta altura, la fecha es de marea alta             |
-|         `marea_baja_m`         |     `real`     |    `-0.55`     |            Hasta esta altura, la fecha es de marea baja             |
-|        `lluvia_max_mm`         |     `real`     |      `60`      | Lluvia de tres días desde la que una fecha no cuenta para `if_alta` |
-|     `if_alta_desconectada`     |     `real`     |     `0.20`     |                  Bajo este `if_alta`, desconectada                  |
-|       `min_fechas_alta`        |   `smallint`   |      `3`       |         Fechas de marea alta mínimas, por [`RN-10`][rn-10]          |
-|           `mayoria`            |   `boolean`    |     `true`     |             Voto de mayoría 3 × 3 sobre la desconexión              |
-|        `usar_elevacion`        |   `boolean`    |     `true`     |           Exigir inundación esperada por cota, si hay DEM           |
-|       `if_esperada_min`        |     `real`     |     `0.5`      |                                                                     |
-|           `sigma_db`           |     `real`     |     `0.9`      |                   Ruido de speckle para `p_error`                   |
-|           `cusum_b`            |   `smallint`   |     `120`      |                     Permutaciones del bootstrap                     |
-|       `cusum_confianza`        |     `real`     |     `0.95`     |               Confianza mínima de un cambio publicado               |
-|       `cusum_perdida_db`       |     `real`     |     `1.5`      |              Caída mínima de HV de un cambio publicado              |
-|         `cv_estanque`          |     `real`     |     `0.45`     |                Desde este CV, el estanque es activo                 |
-|           `cv_banda`           |  `varchar(2)`  |     `'hv'`     |                             `hh` / `hv`                             |
-|         `mascara_modo`         | `varchar(10)`  |  `'estricta'`  |                 Modo de la máscara GCOV al agregar                  |
-|        `creado_por_id`         |     `uuid`     |                |            Nulo en los perfiles sembrados por migración             |
+|         Campo          |      Tipo      | Predeterminado |                    Descripción                    |
+| :--------------------: | :------------: | :------------: | :-----------------------------------------------: |
+|        `codigo`        | `varchar(50)`  |                |   `estricto`, `predeterminado`, `permisivo`...    |
+|       `version`        |   `smallint`   |    derivada    |        Siguiente versión del mismo código         |
+|        `nombre`        | `varchar(100)` |                |                                                   |
+| `ow_hh_db`, `ow_hv_db` |     `real`     | `-16.5`, `-22` | Agua abierta: HH y HV por debajo de estos valores |
+|       `iv_hh_db`       |     `real`     |     `-6.5`     | Vegetación inundada: HH por encima de este valor  |
+
+\1
+| `iv_ratio_holgura_db` | `real` | `1.5` | Tolerancia de HH − HV al pasar de no inundado a vegetación inundada por cambio |
+| `cambio_hh_db`, `cambio_hv_db` | `real` | `3`, `1.5` | Cambio respecto al promedio del track que mueve una celda de clase |
+| `nc_hh_db`, `nc_hv_db` | `real` | `-1`, `-7` | Por encima: fuera del modelo (`NC`) |
+| `usar_coherencia` | `boolean` | `true` | Corregir `OW` a `NI` si la coherencia es alta |
+| `coherencia_min` | `real` | `0.40` | |
+| `marea_alta_m` | `real` | `0.55` | Desde esta altura, la fecha es de marea alta |
+| `marea_baja_m` | `real` | `-0.55` | Hasta esta altura, la fecha es de marea baja |
+| `lluvia_max_mm` | `real` | `60` | Lluvia de tres días desde la que una fecha no cuenta para `if_alta` |
+| `if_alta_desconectada` | `real` | `0.20` | Bajo este `if_alta`, desconectada |
+| `min_fechas_alta` | `smallint` | `3` | Fechas de marea alta mínimas, por [`RN-10`][rn-10] |
+| `mayoria` | `boolean` | `true` | Voto de mayoría 3 × 3 sobre la desconexión |
+| `usar_elevacion` | `boolean` | `false` | Exigir inundación esperada por cota, si hay modelo de elevación |
+\1
+| `marea_margen_m` | `real` | `0.05` | Margen sobre la cota para contar una marea como inundante |
+| `humedal_pendiente_max` | `real` | `8` | Pendiente máxima del humedal, en grados |
+| `humedal_cota_max` | `real` | `15` | Cota máxima del humedal, en metros |
+| `estables_minimas` | `integer` | `200` | Celdas estables mínimas para calibrar, por [`RF-M-10`][rf-m-10] |
+| `sigma_db` | `real` | `0.9` | Ruido de speckle para `p_error` |
+| `cusum_b` | `smallint` | `120` | Permutaciones del bootstrap |
+| `cusum_confianza` | `real` | `0.95` | Confianza mínima de un cambio publicado |
+| `cusum_perdida_db` | `real` | `1.5` | Caída mínima de HV de un cambio publicado |
+| `cv_estanque` | `real` | `0.45` | Desde este CV, el estanque es activo |
+\1
+| `puntaje_distancia`, `puntaje_area`, `puntaje_inundacion` | `real` | `0.4`, `0.3`, `0.3` | Pesos del puntaje de restauración de un estanque abandonado |
+| `creado_por_id` | `uuid` | | Nulo en los perfiles sembrados por migración |
 
 Ningún campo es nulo salvo `creado_por_id`.
+
+`usar_elevacion` es falso por defecto porque el modelo de elevación disponible
+para la región, Copernicus GLO-30, es un modelo de superficie: sobre el manglar
+mide la altura de la copa y no la del suelo. Con él, la inundación esperada por
+cota sería casi nula en todas partes. Un perfil puede activarlo cuando se cargue
+un modelo de terreno desnudo.
 
 ### Constraints
 
@@ -211,30 +228,34 @@ insumos fijados.
 
 ### Columnas
 
-|             Campo             |     Tipo      | Nulo | Predeterminado |                                   Descripción                                    |
-| :---------------------------: | :-----------: | :--: | :------------: | :------------------------------------------------------------------------------: |
-|          `region_id`          |    `uuid`     |  no  |                |                                                                                  |
-|           `version`           | `varchar(20)` |  no  |                |                    Semver de los datos, por [`RN-15`][rn-15]                     |
-|          `perfil_id`          |    `uuid`     |  no  |                |                            Versión exacta del perfil                             |
-|           `madurez`           | `varchar(12)` |  no  |                |                   Única madurez admitida, por [`RN-01`][rn-01]                   |
-|        `modelo_marea`         | `varchar(50)` |  no  |                |                        Modelo de `EstimacionMarea` a usar                        |
-|        `fuente_lluvia`        | `varchar(50)` |  no  |      `''`      |                   Fuente de `LluviaDiaria`; `''` = sin lluvia                    |
-|           `orbita`            | `varchar(5)`  |  no  |   `'ambas'`    |                             `ambas` / `asc` / `desc`                             |
-|           `tracks`            | `smallint[]`  |  no  |     `'{}'`     |                            `'{}'` = todos los tracks                             |
-|       `desde`, `hasta`        |    `date`     |  sí  |                |                      Rango de fechas UTC; nulo = sin límite                      |
-|       `codigo_version`        | `varchar(40)` |  no  |                |                     Commit del código que ejecutó el cálculo                     |
-|           `semilla`           |   `integer`   |  no  |    `12345`     |                    Semilla del bootstrap, por [`D-14`][d-14]                     |
-|           `estado`            | `varchar(12)` |  no  | `'pendiente'`  | `pendiente` / `en_proceso` / `completada` / `fallida` / `publicada` / `retirada` |
-|           `vigente`           |   `boolean`   |  no  |    `false`     |                          La publicada que ve el público                          |
-|          `n_fechas`           |  `smallint`   |  no  |                |                       Fechas fijadas; largo de cada serie                        |
-|      `solicitada_por_id`      |    `uuid`     |  sí  |                |            Cuenta que la lanzó; nulo si la encoló una sincronización             |
-|      `publicada_por_id`       |    `uuid`     |  sí  |                |          Cuenta que la publicó; firma los `ApiMedia` de sus artefactos           |
-| `iniciada_at`, `terminada_at` | `timestamptz` |  sí  |                |                                                                                  |
-|        `publicada_at`         | `timestamptz` |  sí  |                |                                                                                  |
-|         `retirada_at`         | `timestamptz` |  sí  |                |                                                                                  |
-|        `motivo_retiro`        |    `text`     |  no  |      `''`      |                                                                                  |
-|      `purgar_despues_de`      | `timestamptz` |  sí  |                |                             `retirada_at` + 30 días                              |
-|            `error`            |    `text`     |  no  |      `''`      |                        Motivo de la falla; `''` = ninguna                        |
+|      Campo       |     Tipo      | Nulo | Predeterminado |                                   Descripción                                    |
+| :--------------: | :-----------: | :--: | :------------: | :------------------------------------------------------------------------------: |
+|   `region_id`    |    `uuid`     |  no  |                |                                                                                  |
+|    `version`     | `varchar(20)` |  no  |                |                    Semver de los datos, por [`RN-15`][rn-15]                     |
+|   `perfil_id`    |    `uuid`     |  no  |                |                            Versión exacta del perfil                             |
+|    `madurez`     | `varchar(12)` |  no  |                |                   Única madurez admitida, por [`RN-01`][rn-01]                   |
+|  `modelo_marea`  | `varchar(50)` |  no  |                |                        Modelo de `EstimacionMarea` a usar                        |
+| `fuente_lluvia`  | `varchar(50)` |  no  |      `''`      |                   Fuente de `LluviaDiaria`; `''` = sin lluvia                    |
+|     `orbita`     | `varchar(5)`  |  no  |   `'ambas'`    |                             `ambas` / `asc` / `desc`                             |
+|     `tracks`     | `smallint[]`  |  no  |     `'{}'`     |                            `'{}'` = todos los tracks                             |
+| `desde`, `hasta` |    `date`     |  sí  |                |                      Rango de fechas UTC; nulo = sin límite                      |
+| `codigo_version` | `varchar(40)` |  no  |                |                     Commit del código que ejecutó el cálculo                     |
+|    `semilla`     |   `integer`   |  no  |    `12345`     |                    Semilla del bootstrap, por [`D-14`][d-14]                     |
+|     `estado`     | `varchar(12)` |  no  | `'pendiente'`  | `pendiente` / `en_proceso` / `completada` / `fallida` / `publicada` / `retirada` |
+|    `vigente`     |   `boolean`   |  no  |    `false`     |                          La publicada que ve el público                          |
+
+\1
+| `fijadas` | `uuid[]` | no | `'{}'` | Adquisiciones fijadas al crear la corrida, en orden temporal |
+| `cubo_archivo` | `varchar(255)` | no | `''` | Cubo de la corrida para las exploraciones, por [`D-07`][d-07]; `''` = purgado |
+| `cubo_sha256` | `char(64)` | no | `''` | |
+| `solicitada_por_id` | `uuid` | sí | | Cuenta que la lanzó; nulo si la encoló una sincronización |
+| `publicada_por_id` | `uuid` | sí | | Cuenta que la publicó; firma los `ApiMedia` de sus artefactos |
+| `iniciada_at`, `terminada_at` | `timestamptz` | sí | | |
+| `publicada_at` | `timestamptz` | sí | | |
+| `retirada_at` | `timestamptz` | sí | | |
+| `motivo_retiro` | `text` | no | `''` | |
+| `purgar_despues_de` | `timestamptz` | sí | | `retirada_at` + 30 días |
+| `error` | `text` | no | `''` | Motivo de la falla; `''` = ninguna |
 
 ### Constraints
 
@@ -259,6 +280,9 @@ CHECK ((estado = 'retirada') = (retirada_at IS NOT NULL AND motivo_retiro <> '' 
 
 CONSTRAINT chk_corrida_falla
 CHECK ((estado = 'fallida') = (error <> ''))
+
+CONSTRAINT chk_corrida_nfechas
+CHECK (n_fechas >= 1 AND cardinality(fijadas) = n_fechas)
 ```
 
 `beta` no está entre las madurezas admitidas: los productos beta no están
@@ -275,12 +299,13 @@ calibrados y la guía de NISAR desaconseja usarlos para análisis.
 
 ### Triggers
 
-|              Nombre               |                                                              Evento                                                              | Momento  | Nivel |                                                      Regla                                                       |        Origen        |
-| :-------------------------------: | :------------------------------------------------------------------------------------------------------------------------------: | :------: | :---: | :--------------------------------------------------------------------------------------------------------------: | :------------------: |
-|  `trg_corrida_transicion_valida`  |                                                        `UPDATE OF estado`                                                        | `BEFORE` | `ROW` |        `pendiente → en_proceso → completada \| fallida`; `completada → publicada`; `publicada → retirada`        |   [`RN-14`][rn-14]   |
-|      `trg_readonly_corrida`       | `UPDATE OF region_id, version, perfil_id, madurez, modelo_marea, fuente_lluvia, orbita, tracks, desde, hasta, semilla, n_fechas` | `BEFORE` | `ROW` |                              Lo que define la corrida no cambia después de crearla                               |   [`RN-14`][rn-14]   |
-|   `trg_corrida_relevo_vigente`    |                                                   `UPDATE OF vigente, estado`                                                    | `BEFORE` | `ROW` | Al marcar una vigente, desmarca la anterior de la región; al retirar la vigente, marca la publicada más reciente | [`RF-O-13`][rf-o-13] |
-| `trg_corrida_retiro_deja_vigente` |                                                        `UPDATE OF estado`                                                        | `BEFORE` | `ROW` |       Rechaza retirar la vigente si no hay otra publicada en la región, salvo que la región esté inactiva        | [`RF-O-13`][rf-o-13] |
+|              Nombre               |                                                                  Evento                                                                   | Momento  | Nivel |                                                Regla                                                |        Origen        |
+| :-------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------: | :------: | :---: | :-------------------------------------------------------------------------------------------------: | :------------------: |
+|  `trg_corrida_transicion_valida`  |                                                            `UPDATE OF estado`                                                             | `BEFORE` | `ROW` | `pendiente → en_proceso → completada \| fallida`; `completada → publicada`; `publicada → retirada`  |   [`RN-14`][rn-14]   |
+|      `trg_readonly_corrida`       | `UPDATE OF region_id, version, perfil_id, madurez, modelo_marea, fuente_lluvia, orbita, tracks, desde, hasta, semilla, n_fechas, fijadas` | `BEFORE` | `ROW` |                        Lo que define la corrida no cambia después de crearla                        |   [`RN-14`][rn-14]   |
+|    `trg_corrida_unica_vigente`    |                                                            `UPDATE OF vigente`                                                            | `BEFORE` | `ROW` |                      Al marcar una vigente, desmarca la anterior de la región                       | [`RF-O-12`][rf-o-12] |
+|   `trg_corrida_relevo_vigente`    |                                                            `UPDATE OF estado`                                                             | `AFTER`  | `ROW` |             Al retirar la vigente, marca vigente la publicada más reciente de la región             | [`RF-O-13`][rf-o-13] |
+| `trg_corrida_retiro_deja_vigente` |                                                            `UPDATE OF estado`                                                             | `BEFORE` | `ROW` | Rechaza retirar la vigente si no hay otra publicada en la región, salvo que la región esté inactiva | [`RF-O-13`][rf-o-13] |
 
 ---
 
@@ -297,17 +322,17 @@ manifiesto.
   > - [`RF-M-10`][rf-m-10]
   > - [`RN-08`][rn-08], [`RN-09`][rn-09]
 
-|       Campo        |     Tipo      | Nulo | Predeterminado |                              Descripción                               |
-| :----------------: | :-----------: | :--: | :------------: | :--------------------------------------------------------------------: |
-|    `corrida_id`    |    `uuid`     |  no  |                |                                                                        |
-|  `adquisicion_id`  |    `uuid`     |  no  |                |                                                                        |
-|      `orden`       |  `smallint`   |  no  |                | Posición en las series de `ResultadoCelda`, desde 0, en orden temporal |
-|   `fecha_codigo`   | `varchar(20)` |  no  |    copiada     |         Copia de la adquisición; es el `fecha_id` del contrato         |
-|    `desfase_db`    |    `real`     |  no  |                |         Calibración relativa restada, por [`RF-M-10`][rf-m-10]         |
-|     `marea_m`      |    `real`     |  sí  |                |            Del modelo de la corrida; nulo = sin estimación             |
-|   `marea_nivel`    | `varchar(12)` |  no  |                |    `alta` / `media` / `baja` / `desconocida`, por [`RN-08`][rn-08]     |
-|   `lluvia_3d_mm`   |    `real`     |  sí  |                |                 Nulo si falta alguno de los tres días                  |
-| `usada_en_if_alta` |   `boolean`   |  no  |                |        Marea alta y lluvia bajo el umbral, por [`RN-09`][rn-09]        |
+|              Campo               |     Tipo      | Nulo | Predeterminado |                              Descripción                               |
+| :------------------------------: | :-----------: | :--: | :------------: | :--------------------------------------------------------------------: |
+|           `corrida_id`           |    `uuid`     |  no  |                |                                                                        |
+|         `adquisicion_id`         |    `uuid`     |  no  |                |                                                                        |
+|             `orden`              |  `smallint`   |  no  |                | Posición en las series de `ResultadoCelda`, desde 0, en orden temporal |
+|          `fecha_codigo`          | `varchar(20)` |  no  |    copiada     |         Copia de la adquisición; es el `fecha_id` del contrato         |
+| `desfase_hh_db`, `desfase_hv_db` |    `real`     |  no  |                |  Calibración relativa restada a cada banda, por [`RF-M-10`][rf-m-10]   |
+|            `marea_m`             |    `real`     |  sí  |                |            Del modelo de la corrida; nulo = sin estimación             |
+|          `marea_nivel`           | `varchar(12)` |  no  |                |    `alta` / `media` / `baja` / `desconocida`, por [`RN-08`][rn-08]     |
+|          `lluvia_3d_mm`          |    `real`     |  sí  |                |                 Nulo si falta alguno de los tres días                  |
+|        `usada_en_if_alta`        |   `boolean`   |  no  |                |        Marea alta y lluvia bajo el umbral, por [`RN-09`][rn-09]        |
 
 ```postgresql
 CONSTRAINT chk_corridafecha_nivel
@@ -322,11 +347,10 @@ CHECK (NOT usada_en_if_alta OR marea_nivel = 'alta')
 |    `unq_corridafecha_corrida_orden`    |     `(corrida_id, orden)`      |
 | `unq_corridafecha_corrida_adquisicion` | `(corrida_id, adquisicion_id)` |
 
-|                Nombre                |       Evento       | Momento  | Nivel |                                              Regla                                              |      Origen      |
-| :----------------------------------: | :----------------: | :------: | :---: | :---------------------------------------------------------------------------------------------: | :--------------: |
-| `trg_corridafecha_madurez_coherente` |      `INSERT`      | `BEFORE` | `ROW` | La adquisición es de la región y de la madurez de la corrida, y no está reemplazada ni excluida | [`RN-01`][rn-01] |
-|  `trg_corridafecha_derivar_codigo`   |      `INSERT`      | `BEFORE` | `ROW` |                       Sobrescribe `fecha_codigo` con el de la adquisición                       | [`RN-18`][rn-18] |
-|    `trg_resultado_solo_insercion`    | `UPDATE`, `DELETE` | `BEFORE` | `ROW` |               Rechaza toda actualización; admite el borrado solo durante la purga               | [`RN-14`][rn-14] |
+|                Nombre                |       Evento       | Momento  | Nivel |                                                                        Regla                                                                         |               Origen               |
+| :----------------------------------: | :----------------: | :------: | :---: | :--------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------: |
+| `trg_corridafecha_madurez_coherente` |      `INSERT`      | `BEFORE` | `ROW` | La adquisición es de la región y de la madurez de la corrida, y no está reemplazada ni excluida; sobrescribe `fecha_codigo` con el de la adquisición | [`RN-01`][rn-01], [`RN-18`][rn-18] |
+|    `trg_resultado_solo_insercion`    | `UPDATE`, `DELETE` | `BEFORE` | `ROW` |                                         Rechaza toda actualización; admite el borrado solo durante la purga                                          |          [`RN-14`][rn-14]          |
 
 ---
 
@@ -340,9 +364,11 @@ Qué versión de cada tipo de insumo usó la corrida.
 |               Nombre               |        Definición         |
 | :--------------------------------: | :-----------------------: |
 | `unq_corridainsumo_corrida_insumo` | `(corrida_id, insumo_id)` |
+|  `unq_corridainsumo_corrida_tipo`  |   `(corrida_id, tipo)`    |
 
 `trg_corridainsumo_coherente` (`BEFORE INSERT`) exige que el insumo sea de la
-región de la corrida y que no haya otro del mismo tipo en ella.
+región de la corrida y sobrescribe `tipo` con el del insumo, de modo que el
+índice único impide fijar dos insumos del mismo tipo.
 
 ---
 
@@ -474,20 +500,23 @@ Hectáreas de cada clase por fecha y país, para la línea de tiempo y el CSV.
 
 |                    Campo                    |  Tipo  |                     Descripción                     |
 | :-----------------------------------------: | :----: | :-------------------------------------------------: |
+|                `corrida_id`                 |        |              La corrida, para la purga              |
 |         `corrida_fecha_id`, `pais`          |        | Únicos juntos: `unq_resumenfecha_corridafecha_pais` |
 | `ha_iv`, `ha_ow`, `ha_ni`, `ha_nc`, `ha_nd` | `real` |          Solo celdas en máscara de manglar          |
 
 ### `PruebaHipotesis`
 
-|                    Campo                    |      Tipo      | Nulo |                  Descripción                   |
-| :-----------------------------------------: | :------------: | :--: | :--------------------------------------------: |
-|           `corrida_id`, `codigo`            |                |  no  |       `H1` / `H2` / `H3`; únicos juntos        |
-|            `grupo_a`, `grupo_b`             | `varchar(100)` |  no  | Descripción de cada grupo: «junto a bordas»... |
-|                 `evaluable`                 |   `boolean`    |  no  |                                                |
-|                  `motivo`                   |     `text`     |  no  |    Por qué no fue evaluable; `''` si lo fue    |
-|                `n_a`, `n_b`                 |   `integer`    |  no  |                                                |
-|          `mediana_a`, `mediana_b`           |     `real`     |  sí  |                                                |
-| `estadistico_u`, `z`, `p_valor`, `efecto_r` |     `real`     |  sí  |    Mann-Whitney; nulos si no fue evaluable     |
+|               Campo                |      Tipo      | Nulo |                                               Descripción                                                |
+| :--------------------------------: | :------------: | :--: | :------------------------------------------------------------------------------------------------------: |
+|       `corrida_id`, `codigo`       |                |  no  |                                    `H1` / `H2` / `H3`; únicos juntos                                     |
+|        `grupo_a`, `grupo_b`        | `varchar(100)` |  no  |                              Descripción de cada grupo: «junto a bordas»...                              |
+|              `prueba`              | `varchar(12)`  |  no  |                                 `mann_whitney` (H1, H3) / `fisher` (H2)                                  |
+|            `evaluable`             |   `boolean`    |  no  |                                                                                                          |
+|              `motivo`              |     `text`     |  no  |                                 Por qué no fue evaluable; `''` si lo fue                                 |
+|            `n_a`, `n_b`            |   `integer`    |  no  |                                                                                                          |
+|      `mediana_a`, `mediana_b`      |     `real`     |  sí  |                       Medianas en Mann-Whitney; proporciones con pérdida en Fisher                       |
+| `estadistico`, `p_valor`, `efecto` |     `real`     |  sí  | U y r en Mann-Whitney; razón de momios y diferencia de proporciones en Fisher; nulos si no fue evaluable |
+|                `z`                 |     `real`     |  sí  |                                           Solo en Mann-Whitney                                           |
 
 ```postgresql
 CONSTRAINT chk_pruebahipotesis_evaluable
@@ -511,6 +540,7 @@ CHECK (activo = (puntaje IS NULL))
 ```
 
 [d-04]: ../decisiones.md#d-04
+[d-07]: ../decisiones.md#d-07
 [d-14]: ../decisiones.md#d-14
 [regimenes]: ../convenciones.md#regimenes-de-escritura
 [rf-c-07]: ../../requerimientos/funcionales/consulta.md#rf-c-07
@@ -524,6 +554,7 @@ CHECK (activo = (puntaje IS NULL))
 [rf-m-23]: ../../requerimientos/funcionales/motor.md#rf-m-23
 [rf-o-09]: ../../requerimientos/funcionales/operacion.md#rf-o-09
 [rf-o-10]: ../../requerimientos/funcionales/operacion.md#rf-o-10
+[rf-o-12]: ../../requerimientos/funcionales/operacion.md#rf-o-12
 [rf-o-13]: ../../requerimientos/funcionales/operacion.md#rf-o-13
 [rn-01]: ../../requerimientos/reglas-negocio.md#rn-01
 [rn-08]: ../../requerimientos/reglas-negocio.md#rn-08

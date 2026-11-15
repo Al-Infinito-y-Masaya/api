@@ -112,6 +112,11 @@ INSTALLED_APPS: Final[Sequence[str]] = (
     "api_core",
     "api_auth",
     "api_media",
+    "mangroove_regiones",
+    "mangroove_adquisiciones",
+    "mangroove_insumos",
+    "mangroove_analisis",
+    "mangroove_publicacion",
 )
 
 MIDDLEWARE: Final[Sequence[str]] = (

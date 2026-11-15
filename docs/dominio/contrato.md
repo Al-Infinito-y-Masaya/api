@@ -12,28 +12,37 @@ OpenAPI; el esquema JSON del respaldo y los tipos Zod del frontend derivan de é
 ## Rutas públicas
 
 Todas las rutas son de solo lectura y no exigen sesión, salvo la exploración,
-que es `POST` porque lleva cuerpo. `{v}` es la versión de la corrida.
+que es `POST` porque lleva cuerpo. Todas terminan en `/`. `{r}` es el código de
+la región, `{v}` la versión de la corrida y `{f}` el identificador de una fecha.
 
-|                           Ruta                            |                   Respuesta                   |    Requerimiento     |
-| :-------------------------------------------------------: | :-------------------------------------------: | :------------------: |
-|                      `GET /regiones`                      |         Regiones con versión vigente          | [`RF-C-01`][rf-c-01] |
-|               `GET /regiones/{r}/manifest`                |      `307` a la ruta con versión vigente      | [`RF-C-02`][rf-c-02] |
-|        `GET /regiones/{r}/versiones/{v}/manifest`         |                 `Manifiesto`                  | [`RF-C-02`][rf-c-02] |
-| `GET /regiones/{r}/versiones/{v}/fechas/{f}/capas/{capa}` |   `302` al PNG de la CDN (`rgb`, `clases`)    | [`RF-C-04`][rf-c-04] |
-|      `GET /regiones/{r}/versiones/{v}/capas/{capa}`       | `302` al PNG de la CDN (`if_alta`, `if`, ...) | [`RF-C-05`][rf-c-05] |
-|   `GET /regiones/{r}/versiones/{v}/fechas/{f}/sensores`   |     Capas auxiliares cercanas a la fecha      | [`RF-C-06`][rf-c-06] |
-|       `GET /regiones/{r}/versiones/{v}/celdas/{id}`       |                    `Celda`                    | [`RF-C-07`][rf-c-07] |
-|    `GET /regiones/{r}/versiones/{v}/celdas?lon=&lat=`     |                    `Celda`                    | [`RF-C-08`][rf-c-08] |
-|         `GET /regiones/{r}/versiones/{v}/resumen`         |    `Resumen` en JSON o CSV según `Accept`     | [`RF-C-09`][rf-c-09] |
-|        `GET /regiones/{r}/versiones/{v}/estanques`        |         Estanques con filtros y orden         | [`RF-C-10`][rf-c-10] |
-|        `GET /regiones/{r}/versiones/{v}/hipotesis`        |                Pruebas H1 a H3                | [`RF-C-11`][rf-c-11] |
-|     `POST /regiones/{r}/versiones/{v}/exploraciones`      |  Capa de conectividad y resumen recalculados  | [`RF-C-12`][rf-c-12] |
-|         `GET /regiones/{r}/versiones/{v}/metodo`          |       Fuentes, insumos, perfil y código       | [`RF-C-13`][rf-c-13] |
-|        `GET /regiones/{r}/versiones/{v}/descargas`        |     Archivos con tamaño, suma y licencia      | [`RF-C-14`][rf-c-14] |
+|                                    Ruta                                     |                                                Respuesta                                                |    Requerimiento     |
+| :-------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------: | :------------------: |
+|                              `GET /regiones/`                               |                                      Regiones con versión vigente                                       | [`RF-C-01`][rf-c-01] |
+|                        `GET /regiones/{r}/manifest/`                        |                                   `307` a la ruta con versión vigente                                   | [`RF-C-02`][rf-c-02] |
+|                 `GET /regiones/{r}/versiones/{v}/manifest/`                 |                                              `Manifiesto`                                               | [`RF-C-02`][rf-c-02] |
+|         `GET /regiones/{r}/versiones/{v}/fechas/{f}/capas/{capa}/`          |                                `302` al PNG de la CDN (`rgb`, `clases`)                                 | [`RF-C-04`][rf-c-04] |
+|               `GET /regiones/{r}/versiones/{v}/capas/{capa}/`               |              `302` al PNG de la CDN (`if_alta`, `if`, `desconexion`, `p_error`, `cambio`)               | [`RF-C-05`][rf-c-05] |
+|           `GET /regiones/{r}/versiones/{v}/fechas/{f}/sensores/`            |                                  Capas auxiliares cercanas a la fecha                                   | [`RF-C-06`][rf-c-06] |
+|               `GET /regiones/{r}/versiones/{v}/celdas/{id}/`                |                                                 `Celda`                                                 | [`RF-C-07`][rf-c-07] |
+|             `GET /regiones/{r}/versiones/{v}/celdas/?lon=&lat=`             |                                                 `Celda`                                                 | [`RF-C-08`][rf-c-08] |
+|                 `GET /regiones/{r}/versiones/{v}/resumen/`                  |                      `Resumen` en JSON; con `?formato=csv`, `302` al CSV de la CDN                      | [`RF-C-09`][rf-c-09] |
+|         `GET /regiones/{r}/versiones/{v}/estanques/?clase=&orden=`          | Estanques; `clase` = `activo` / `abandonado`, `orden` = `puntaje` / `area` / `distancia` / `inundacion` | [`RF-C-10`][rf-c-10] |
+|                `GET /regiones/{r}/versiones/{v}/hipotesis/`                 |                                             Pruebas H1 a H3                                             | [`RF-C-11`][rf-c-11] |
+|              `POST /regiones/{r}/versiones/{v}/exploraciones/`              |                                              `Exploracion`                                              | [`RF-C-12`][rf-c-12] |
+| `GET /regiones/{r}/versiones/{v}/exploraciones/{huella}/capas/desconexion/` |                              PNG de la exploración, mientras siga en caché                              | [`RF-C-12`][rf-c-12] |
+|                  `GET /regiones/{r}/versiones/{v}/metodo/`                  |                                    Fuentes, insumos, perfil y código                                    | [`RF-C-13`][rf-c-13] |
+|                `GET /regiones/{r}/versiones/{v}/descargas/`                 |                                Archivos con tamaño, suma, licencia y URL                                | [`RF-C-14`][rf-c-14] |
 
-Una versión retirada responde `410` en todas sus rutas. Las rutas de operación
-viven bajo `/operacion/` con la autenticación del template y se documentan en el
-esquema OpenAPI que genera la API.
+- **Caché:** las rutas con versión responden con
+  `Cache-Control: public, max-age=31536000, immutable` y un `ETag`. Una petición
+  con `If-None-Match` igual al `ETag` recibe `304` sin cuerpo. Las rutas sin
+  versión usan `max-age=300`.
+- **Errores:** una región, versión, capa o celda inexistente responde `404`; un
+  punto fuera de la grilla, también. Una versión retirada responde `410` en
+  todas sus rutas.
+- **Operación:** las rutas de operación viven bajo `/operacion/` con la
+  autenticación del template y se documentan en el esquema OpenAPI que genera la
+  API.
 
 ---
 
@@ -80,8 +89,8 @@ esquema OpenAPI que genera la API.
       "lluvia_3d_mm": 12.4,
       "usada_en_if_alta": true,
       "capas": {
-        "rgb": "regiones/estero_real/versiones/1.3.0/fechas/2026-10-14_033_asc/capas/rgb",
-        "clases": "regiones/estero_real/versiones/1.3.0/fechas/2026-10-14_033_asc/capas/clases"
+        "rgb": "regiones/estero_real/versiones/1.3.0/fechas/2026-10-14_033_asc/capas/rgb/",
+        "clases": "regiones/estero_real/versiones/1.3.0/fechas/2026-10-14_033_asc/capas/clases/"
       }
     }
   ],
@@ -94,13 +103,12 @@ esquema OpenAPI que genera la API.
   ],
   "limites": [-87.401, 12.799, -87.049, 13.101],
   "capas": {
-    "if_alta": "regiones/estero_real/versiones/1.3.0/capas/if_alta",
-    "if": "regiones/estero_real/versiones/1.3.0/capas/if",
-    "desconexion": "regiones/estero_real/versiones/1.3.0/capas/desconexion",
-    "p_error": "regiones/estero_real/versiones/1.3.0/capas/p_error",
-    "cambio": "regiones/estero_real/versiones/1.3.0/capas/cambio",
-    "estanques": "regiones/estero_real/versiones/1.3.0/estanques",
-    "areas_protegidas": "regiones/estero_real/versiones/1.3.0/descargas/areas_protegidas.geojson"
+    "if_alta": "regiones/estero_real/versiones/1.3.0/capas/if_alta/",
+    "if": "regiones/estero_real/versiones/1.3.0/capas/if/",
+    "desconexion": "regiones/estero_real/versiones/1.3.0/capas/desconexion/",
+    "p_error": "regiones/estero_real/versiones/1.3.0/capas/p_error/",
+    "cambio": "regiones/estero_real/versiones/1.3.0/capas/cambio/",
+    "estanques": "regiones/estero_real/versiones/1.3.0/estanques/"
   },
   "umbrales": {
     "perfil": "predeterminado",
@@ -173,6 +181,37 @@ esquema OpenAPI que genera la API.
   ]
 }
 ```
+
+## `Exploracion`
+
+El cuerpo admite solo estos umbrales, todos opcionales y acotados:
+`ow_hh_db`, `ow_hv_db`, `iv_hh_db`, `iv_ratio_db`, `marea_alta_m`,
+`lluvia_max_mm`, `if_alta_desconectada`, `min_fechas_alta` y `mayoria`. Lo que
+no se envía se toma del perfil de la versión.
+
+```json
+{
+  "exploracion": true,
+  "huella": "5f0c…",
+  "version": "1.3.0",
+  "umbrales": "{\"if_alta_desconectada\": 0.3}",
+  "capas": {
+    "desconexion": "regiones/estero_real/versiones/1.3.0/exploraciones/5f0c…/capas/desconexion/"
+  },
+  "resumen": [
+    {
+      "pais": "",
+      "ha_manglar": 5210.0,
+      "ha_desconectada": 612.0,
+      "ha_insuficiente": 38.0
+    }
+  ]
+}
+```
+
+La `huella` es la suma SHA-256 de la versión y del perfil resultante: dos
+exploraciones con los mismos umbrales comparten respuesta y capa durante
+veinticuatro horas.
 
 ---
 

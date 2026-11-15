@@ -79,6 +79,7 @@ classDiagram
         +varchar(4) orbita
         +smallint[] frames
         +timestamptz inicio_at
+        +timestamptz pasada_at
         +varchar(20) fecha_codigo
         +varchar(12) madurez
         +varchar(6) crid
@@ -201,7 +202,7 @@ El trabajo de leer un producto para una región, y su resultado en disco.
 |      `error`      |     `text`     |  no  |      `''`      |                Último error; `''` = ninguno                |
 | `motivo_descarte` |     `text`     |  no  |      `''`      |  Por qué no se usará: CRID viejo, sin HV, fuera del área   |
 |     `archivo`     | `varchar(255)` |  no  |      `''`      |      Ruta relativa del HDF5; `''` mientras no exista       |
-|     `sha256`      |   `char(64)`   |  sí  |                |                                                            |
+|     `sha256`      |   `char(64)`   |  no  |      `''`      |         Suma del recorte; `''` mientras no exista          |
 |      `bytes`      |    `bigint`    |  sí  |                |                                                            |
 |     `ventana`     |  `integer[]`   |  no  |     `'{}'`     |        Filas y columnas leídas: `{r0, r1, c0, c1}`         |
 |     `pixel_m`     |     `real`     |  sí  |                |               Espaciado nativo del producto                |
@@ -219,7 +220,7 @@ CHECK (estado IN ('pendiente', 'recortado', 'descartado', 'fallido'))
 CONSTRAINT chk_recorte_recortado_completo
 CHECK (
   (estado = 'recortado') = (
-    archivo <> '' AND sha256 IS NOT NULL AND recortado_at IS NOT NULL
+    archivo <> '' AND sha256 <> '' AND recortado_at IS NOT NULL
     AND cardinality(ventana) = 4
   )
 )
@@ -260,24 +261,26 @@ Una pasada del satélite sobre una región, formada por uno o dos recortes.
 
 ### Columnas
 
-|       Campo        |      Tipo      | Nulo | Predeterminado |                           Descripción                           |
-| :----------------: | :------------: | :--: | :------------: | :-------------------------------------------------------------: |
-|    `region_id`     |     `uuid`     |  no  |                |                                                                 |
-|      `track`       |   `smallint`   |  no  |                |                                                                 |
-|      `orbita`      |  `varchar(4)`  |  no  |                |                         `asc` / `desc`                          |
-|      `frames`      |  `smallint[]`  |  no  |                |                   Frames combinados, en orden                   |
-|    `inicio_at`     | `timestamptz`  |  no  |                |              Inicio del primer frame de la pasada               |
-|   `fecha_codigo`   | `varchar(20)`  |  no  |    derivada    |    `AAAA-MM-DD_TTT_orbita` en fecha UTC; lo fija el trigger     |
-|     `madurez`      | `varchar(12)`  |  no  |                |                    Copiada de sus productos                     |
-|       `crid`       |  `varchar(6)`  |  no  |                |                    Copiado de sus productos                     |
-|    `incidencia`    |     `real`     |  sí  |                |               Promedio ponderado de sus recortes                |
-|    `cobertura`     |     `real`     |  no  |                |      Fracción de celdas de la región con muestras válidas       |
-|  `grilla_archivo`  | `varchar(255)` |  no  |      `''`      |  `.npy` con HH y HV agregados a la grilla; `''` = sin agregar   |
-|  `grilla_sha256`   |   `char(64)`   |  sí  |                |                                                                 |
-|     `excluida`     |   `boolean`    |  no  |    `false`     |                    Excluida por el operador                     |
-| `motivo_exclusion` |     `text`     |  no  |      `''`      |                                                                 |
-|   `reemplazada`    |   `boolean`    |  no  |    `false`     |   Un reproceso la reemplazó; la fija el trigger del reemplazo   |
-|  `reemplaza_a_id`  |     `uuid`     |  sí  |                | Adquisición anterior de la misma pasada; nulo = primera versión |
+|    Campo    |     Tipo     | Nulo | Predeterminado |         Descripción         |
+| :---------: | :----------: | :--: | :------------: | :-------------------------: |
+| `region_id` |    `uuid`    |  no  |                |                             |
+|   `track`   |  `smallint`  |  no  |                |                             |
+|  `orbita`   | `varchar(4)` |  no  |                |       `asc` / `desc`        |
+|  `frames`   | `smallint[]` |  no  |                | Frames combinados, en orden |
+
+\1
+| `pasada_at` | `timestamptz` | no | derivada | `inicio_at` truncado al minuto en UTC; identifica la pasada. Lo fija el trigger |
+| `fecha_codigo` | `varchar(20)` | no | derivada | `AAAA-MM-DD_TTT_orbita` en fecha UTC; lo fija el trigger |
+| `madurez` | `varchar(12)` | no | | Copiada de sus productos |
+| `crid` | `varchar(6)` | no | | Copiado de sus productos |
+| `incidencia` | `real` | sí | | Promedio ponderado de sus recortes |
+| `cobertura` | `real` | no | | Fracción de celdas de la región con muestras válidas |
+| `grilla_archivo` | `varchar(255)` | no | `''` | `.npy` con HH y HV agregados a la grilla; `''` = sin agregar |
+| `grilla_sha256` | `char(64)` | no | `''` | Suma de la grilla agregada; `''` = sin agregar |
+| `excluida` | `boolean` | no | `false` | Excluida por el operador |
+| `motivo_exclusion` | `text` | no | `''` | |
+| `reemplazada` | `boolean` | no | `false` | Un reproceso la reemplazó; la fija el trigger del reemplazo |
+| `reemplaza_a_id` | `uuid` | sí | | Adquisición anterior de la misma pasada; nulo = primera versión |
 
 Una adquisición es **vigente** cuando no fue reemplazada y no está excluida.
 El puntero va de la versión nueva a la vieja porque el reemplazo ocurre al
@@ -294,7 +297,7 @@ CONSTRAINT chk_adquisicion_exclusion_motivo
 CHECK (excluida = (motivo_exclusion <> ''))
 
 CONSTRAINT chk_adquisicion_grilla_completa
-CHECK ((grilla_archivo <> '') = (grilla_sha256 IS NOT NULL))
+CHECK ((grilla_archivo <> '') = (grilla_sha256 <> ''))
 
 CONSTRAINT chk_adquisicion_no_se_reemplaza_a_si_misma
 CHECK (reemplaza_a_id IS DISTINCT FROM id)
@@ -302,21 +305,21 @@ CHECK (reemplaza_a_id IS DISTINCT FROM id)
 
 ### Unicidad e índices
 
-|              Nombre              |                                               Definición                                               |               Propósito               |
-| :------------------------------: | :----------------------------------------------------------------------------------------------------: | :-----------------------------------: |
-| `unq_adquisicion_pasada_vigente` | `(region_id, track, orbita, date_trunc('minute', inicio_at AT TIME ZONE 'UTC')) WHERE NOT reemplazada` |           [`RN-02`][rn-02]            |
-|  `unq_adquisicion_region_fecha`  |                           `(region_id, fecha_codigo) WHERE NOT reemplazada`                            |       Un `fecha_id` por pasada        |
-|   `unq_adquisicion_reemplazaa`   |                                           `(reemplaza_a_id)`                                           | Una versión se reemplaza una sola vez |
-|    `idx_adquisicion_vigentes`    |                `(region_id, madurez, inicio_at) WHERE NOT reemplazada AND NOT excluida`                |    Elegir fechas para una corrida     |
+|              Nombre              |                                Definición                                |               Propósito               |
+| :------------------------------: | :----------------------------------------------------------------------: | :-----------------------------------: |
+| `unq_adquisicion_pasada_vigente` |      `(region_id, track, orbita, pasada_at) WHERE NOT reemplazada`       |           [`RN-02`][rn-02]            |
+|  `unq_adquisicion_region_fecha`  |            `(region_id, fecha_codigo) WHERE NOT reemplazada`             |       Un `fecha_id` por pasada        |
+|   `unq_adquisicion_reemplazaa`   |                            `(reemplaza_a_id)`                            | Una versión se reemplaza una sola vez |
+|    `idx_adquisicion_vigentes`    | `(region_id, madurez, inicio_at) WHERE NOT reemplazada AND NOT excluida` |    Elegir fechas para una corrida     |
 
 ### Triggers
 
-|               Nombre                |                                 Evento                                 | Momento  | Nivel |                                                                                      Regla                                                                                       |      Origen      |
-| :---------------------------------: | :--------------------------------------------------------------------: | :------: | :---: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------: |
-|  `trg_adquisicion_derivar_codigo`   |                                `INSERT`                                | `BEFORE` | `ROW` |                                                      Sobrescribe `fecha_codigo` desde `inicio_at` (UTC), `track` y `orbita`                                                      | [`RN-18`][rn-18] |
-|     `trg_readonly_adquisicion`      | `UPDATE OF region_id, track, orbita, inicio_at, madurez, crid, frames` | `BEFORE` | `ROW` |                                                                       La identidad de la pasada no cambia                                                                        | [`RN-02`][rn-02] |
-| `trg_adquisicion_aplicar_reemplazo` |                                `INSERT`                                | `BEFORE` | `ROW` | Si trae `reemplaza_a_id`, exige misma región y pasada, CRID mayor y la anterior todavía no reemplazada, y marca la anterior `reemplazada` antes de que se evalúe el índice único | [`RN-02`][rn-02] |
-|      `trg_readonly_reemplazo`       |                `UPDATE OF reemplazada, reemplaza_a_id`                 | `BEFORE` | `ROW` |                                    `reemplazada` solo pasa de falso a verdadero y solo desde el trigger anterior; `reemplaza_a_id` no cambia                                     | [`RN-02`][rn-02] |
+|               Nombre                |                                                     Evento                                                      | Momento  | Nivel |                                                                                      Regla                                                                                       |      Origen      |
+| :---------------------------------: | :-------------------------------------------------------------------------------------------------------------: | :------: | :---: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------: |
+|  `trg_adquisicion_derivar_codigo`   |                                                    `INSERT`                                                     | `BEFORE` | `ROW` |                                               Sobrescribe `pasada_at` y `fecha_codigo` desde `inicio_at` (UTC), `track` y `orbita`                                               | [`RN-18`][rn-18] |
+|     `trg_readonly_adquisicion`      | `UPDATE OF region_id, track, orbita, inicio_at, pasada_at, fecha_codigo, madurez, crid, frames, reemplaza_a_id` | `BEFORE` | `ROW` |                                                                       La identidad de la pasada no cambia                                                                        | [`RN-02`][rn-02] |
+| `trg_adquisicion_aplicar_reemplazo` |                                                    `INSERT`                                                     | `BEFORE` | `ROW` | Si trae `reemplaza_a_id`, exige misma región y pasada, CRID mayor y la anterior todavía no reemplazada, y marca la anterior `reemplazada` antes de que se evalúe el índice único | [`RN-02`][rn-02] |
+|      `trg_readonly_reemplazo`       |                                     `UPDATE OF reemplazada, reemplaza_a_id`                                     | `BEFORE` | `ROW` |                                    `reemplazada` solo pasa de falso a verdadero y solo desde el trigger anterior; `reemplaza_a_id` no cambia                                     | [`RN-02`][rn-02] |
 
 ---
 
