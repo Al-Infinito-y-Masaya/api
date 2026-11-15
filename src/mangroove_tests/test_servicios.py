@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from h5py import File
-from numpy import arange, float32, full, ones
+from numpy import arange, array, float32, full, nan, ones
 from numpy.ma import masked_array
 from pydantic import SecretStr
 from pytest import MonkeyPatch, approx, fixture, raises
@@ -25,6 +25,7 @@ from mangroove_comun.comandos import (
     region_por_codigo,
     usuario_por_identificador,
 )
+from mangroove_comun.config import MangrooveConfig
 from mangroove_comun.medios import AlmacenamientoError, dimensiones, subir
 from mangroove_insumos import services as insumos
 from mangroove_insumos.enums import TipoInsumo, TipoSerie
@@ -295,11 +296,32 @@ def test_pytmd_results_are_masked_to_none(
     instantes = [datetime(2026, 7, 1, tzinfo=UTC), datetime(2026, 7, 2, tzinfo=UTC)]
 
     assert alturas_marea(
-        instantes, lon=0.0, lat=0.0, directorio=tmp_path, modelo="FES2014"
+        instantes, lon=0.0, lat=0.0, directorio=tmp_path, modelo="GOT4.10_nc"
     ) == [0.5, None]
     assert (
-        alturas_marea([], lon=0.0, lat=0.0, directorio=tmp_path, modelo="FES2014") == []
+        alturas_marea([], lon=0.0, lat=0.0, directorio=tmp_path, modelo="GOT4.10_nc")
+        == []
     )
+
+
+def test_pytmd_arrays_drop_non_finite_values(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        marea, "tide_elevations", lambda *a, **k: array([[0.25], [nan]])
+    )
+
+    instantes = [datetime(2026, 7, 1, tzinfo=UTC), datetime(2026, 7, 2, tzinfo=UTC)]
+
+    assert alturas_marea(
+        instantes, lon=0.0, lat=0.0, directorio=tmp_path, modelo="GOT4.10_nc"
+    ) == [0.25, None]
+
+
+def test_empty_tide_directory_means_no_model(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setenv("MANGROOVE_MAREA", "")
+
+    assert MangrooveConfig().MANGROOVE_MAREA is None
 
 
 def test_series_interpolate_inside_their_range() -> None:

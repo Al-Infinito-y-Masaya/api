@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Final, Literal
 
-from pydantic import NonNegativeInt, SecretStr
+from pydantic import NonNegativeInt, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from api_utils.env import ROOT
@@ -18,7 +18,7 @@ class MangrooveConfig(BaseSettings):
 
     MANGROOVE_DATOS: Path = ROOT / ".datos"
     MANGROOVE_MAREA: Path | None = None
-    MANGROOVE_MODELO_MAREA: str = "FES2014"
+    MANGROOVE_MODELO_MAREA: str = "GOT4.10_nc"
     MANGROOVE_ACCESO: Literal["auto", "https", "s3"] = "auto"
     MANGROOVE_HILOS: NonNegativeInt = 0
     MANGROOVE_CDN_PREFIJO: str = "mangroove"
@@ -26,6 +26,11 @@ class MangrooveConfig(BaseSettings):
     MANGROOVE_DIAS_PURGA: int = 30
 
     EARTHDATA_TOKEN: SecretStr = SecretStr(secret_value="")
+
+    @field_validator("MANGROOVE_MAREA", mode="before")
+    @classmethod
+    def marea_vacia(cls, valor: object) -> object:
+        return valor or None
 
     @property
     def recortes(self) -> Path:
