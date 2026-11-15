@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "iso": "NI", "nombre": "Nicaragua" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-87.45, 12.87],
+            [-87.29, 12.87],
+            [-87.29, 13.01],
+            [-87.45, 13.01],
+            [-87.45, 12.87]
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -43,10 +43,12 @@ ENV DJANGO_SETTINGS_MODULE=api_core.settings \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends --yes ca-certificates && \
+    apt-get install --no-install-recommends --yes ca-certificates libexpat1 && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd --system api && \
-    useradd --create-home --gid api --home-dir /app --system api
+    useradd --create-home --gid api --home-dir /app --system api && \
+    mkdir -p /data/mangroove /data/marea /data/entrada && \
+    chown api:api /data/mangroove
 
 WORKDIR /app
 

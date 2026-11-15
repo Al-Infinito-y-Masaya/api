@@ -237,6 +237,14 @@ dc-up:
       docker compose up --detach --wait postgres redis
     fi
 
+[group("docker-compose")]
+demo: (check-dep "docker")
+    bash {{ just_dir }}deploy/demo.sh
+
+[group("docker-compose")]
+demo-preparar: (check-dep "docker")
+    bash {{ just_dir }}deploy/preparar.sh
+
 ########################################################################################
 
 [group("api")]

@@ -16,5 +16,8 @@ __pycache__/
 media
 site
 
+.marea/
+deploy/estero_real/manglar.tif
+
 !.coveragerc.toml
 !.vscode/extensions.json
