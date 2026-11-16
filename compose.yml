@@ -38,15 +38,16 @@ x-api-env: &api-env
   SKIP_SEEDERS: ${SKIP_SEEDERS:-False}
 
 x-api-healthcheck: &api-healthcheck
-  interval: 5s
-  retries: 10
-  start_period: 5s
+  interval: 30s
+  retries: 3
+  start_period: 30s
+  start_interval: 5s
   test:
     - CMD
     - python
     - -c
-    - import urllib.request as u; u.urlopen('http://127.0.0.1:8080/health/')
-  timeout: 5s
+    - import urllib.request as u; u.urlopen('http://127.0.0.1:8080/health/', timeout=10)
+  timeout: 15s
 
 services:
   postgres:
@@ -129,6 +130,8 @@ services:
       DEBUG: "False"
     healthcheck: *api-healthcheck
     image: api:prod
+    labels:
+      autoheal: "true"
     ports:
       - "127.0.0.1:8080:8080"
     profiles: ["prod"]
@@ -137,6 +140,18 @@ services:
       - ${MANGROOVE_DATOS_HOST:-./.datos}:/data/mangroove
       - ${MANGROOVE_MAREA_HOST:-./.marea}:/data/marea:ro
       - ${MANGROOVE_ENTRADA_HOST:-./deploy}:/data/entrada:ro
+
+  # Docker only marks a container unhealthy; this restarts the ones labelled autoheal.
+  autoheal:
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: autoheal
+      AUTOHEAL_INTERVAL: 30
+      AUTOHEAL_START_PERIOD: 120
+    image: willfarrell/autoheal:1.2.0
+    profiles: ["prod"]
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   pgdata:
