@@ -5,7 +5,7 @@ from dmr import ResponseSpec, validate
 from health_check import Cache, Database, Storage
 from health_check.base import HealthCheckResult
 
-from api_core.controllers.mixins import PublicControllerMixin, StrictThrottlingMixin
+from api_core.controllers.mixins import PublicControllerMixin
 from api_core.schemas.health import HealthCheckError, HealthCheckSuccess
 
 from .base import BaseController
@@ -16,9 +16,12 @@ from .serializers import CustomPydanticFastSerializer
 
 class HealthCheckController(
     PublicControllerMixin,
-    StrictThrottlingMixin,
     BaseController[CustomPydanticFastSerializer],
 ):
+    # Docker and Caddy probe this endpoint on a schedule; a 429 would mark a healthy
+    # API as down, so the probe is never throttled.
+    throttling = None
+
     @validate(
         ResponseSpec(
             return_type=HealthCheckSuccess,

@@ -96,6 +96,19 @@ def test_health_status_matches_components(
     )
 
 
+def test_health_is_never_throttled(
+    dmr_client: DMRClient,
+    db: None,
+    live_throttling: None,
+) -> None:
+    # Docker and Caddy probe it on a schedule; a 429 would mark a healthy API as down.
+    statuses: set[int] = {
+        dmr_client.get(route("health-check")).status_code for _ in range(30)
+    }
+
+    assert HTTPStatus.TOO_MANY_REQUESTS not in statuses
+
+
 ########################################################################################
 
 
